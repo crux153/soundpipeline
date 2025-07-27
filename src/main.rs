@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use ffmpeg_sidecar::download::auto_download;
-use soundpipeline::{config::Config, format_selector, format_parser, pipeline::Pipeline};
+use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -44,6 +44,9 @@ async fn main() -> Result<()> {
     auto_download()?;
     tracing::info!("FFmpeg is ready");
 
+    // Check encoder availability
+    let encoder_availability = encoders::check_encoder_availability()?;
+
     tracing::info!("Starting SoundPipeline with config: {}", args.config.display());
 
     // Load configuration
@@ -63,7 +66,7 @@ async fn main() -> Result<()> {
 
     // Create and execute pipeline
     let working_dir = std::env::current_dir()?;
-    let pipeline = Pipeline::from_config(&config, &selected_format, &working_dir)?;
+    let pipeline = Pipeline::from_config(&config, &selected_format, &working_dir, &encoder_availability)?;
     pipeline.execute().await?;
 
     tracing::info!("SoundPipeline completed successfully");

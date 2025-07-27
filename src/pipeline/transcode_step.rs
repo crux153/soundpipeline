@@ -1,3 +1,4 @@
+use crate::encoders::EncoderAvailability;
 use crate::pipeline::Step;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -11,6 +12,7 @@ pub struct TranscodeStep {
     pub files: Vec<String>,
     pub format: String,
     pub bitrate: Option<String>,
+    pub encoder_availability: EncoderAvailability,
 }
 
 impl TranscodeStep {
@@ -20,6 +22,7 @@ impl TranscodeStep {
         files: Vec<String>,
         format: String,
         bitrate: Option<String>,
+        encoder_availability: EncoderAvailability,
     ) -> Self {
         Self {
             input_dir,
@@ -27,6 +30,7 @@ impl TranscodeStep {
             files,
             format,
             bitrate,
+            encoder_availability,
         }
     }
 
@@ -40,17 +44,22 @@ impl TranscodeStep {
                 Ok(args)
             }
             "aac" => {
-                let mut args = vec!["-acodec".to_string(), "aac".to_string()];
+                let encoder = self.encoder_availability.get_aac_encoder();
+                let mut args = vec!["-acodec".to_string(), encoder.to_string()];
                 if let Some(bitrate) = &self.bitrate {
                     args.extend(["-ab".to_string(), bitrate.clone()]);
                 }
+                debug!("Using AAC encoder: {}", encoder);
                 Ok(args)
             }
             "flac" => {
                 Ok(vec!["-acodec".to_string(), "flac".to_string()])
             }
             "alac" => {
-                Ok(vec!["-acodec".to_string(), "alac".to_string()])
+                let encoder = self.encoder_availability.get_alac_encoder();
+                let args = vec!["-acodec".to_string(), encoder.to_string()];
+                debug!("Using ALAC encoder: {}", encoder);
+                Ok(args)
             }
             _ => {
                 anyhow::bail!("Unsupported format: {}", self.format);
