@@ -2,7 +2,7 @@ use crate::config::TagFile;
 use crate::pipeline::Step;
 use anyhow::Result;
 use async_trait::async_trait;
-use lofty::{prelude::*, probe::Probe, tag::Tag, picture::{Picture, PictureType, MimeType}, config::WriteOptions};
+use lofty::{prelude::*, probe::Probe, tag::{Tag, TagItem, ItemValue}, picture::{Picture, PictureType, MimeType}, config::WriteOptions};
 use std::path::Path;
 use tracing::{info, debug, warn};
 
@@ -49,9 +49,29 @@ impl TagStep {
             debug!("Set album: {}", album);
         }
 
+        if let Some(album_artist) = &tag_config.album_artist {
+            tag.insert(TagItem::new(ItemKey::AlbumArtist, ItemValue::Text(album_artist.clone())));
+            debug!("Set album artist: {}", album_artist);
+        }
+
         if let Some(track) = tag_config.track {
             tag.set_track(track);
             debug!("Set track: {}", track);
+        }
+
+        if let Some(track_total) = tag_config.track_total {
+            tag.set_track_total(track_total);
+            debug!("Set track total: {}", track_total);
+        }
+
+        if let Some(disk) = tag_config.disk {
+            tag.set_disk(disk);
+            debug!("Set disk: {}", disk);
+        }
+
+        if let Some(disk_total) = tag_config.disk_total {
+            tag.set_disk_total(disk_total);
+            debug!("Set disk total: {}", disk_total);
         }
 
         if let Some(genre) = &tag_config.genre {

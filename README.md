@@ -89,13 +89,26 @@ steps:
         title: "Track 1"
         artist: "Artist Name"
         album: "Album Name"
+        album_artist: "Album Artist Name"
         track: 1
+        track_total: 12
+        disk: 1
+        disk_total: 2
+        genre: "Pop"
+        year: 2024
         album_art: "cover.jpg"
+        comment: "Converted with SoundPipeline"
       - file: "track_02.*"
         title: "Track 2"
         artist: "Artist Name"
         album: "Album Name"
+        album_artist: "Album Artist Name"
         track: 2
+        track_total: 12
+        disk: 1
+        disk_total: 2
+        genre: "Pop"
+        year: 2024
         album_art: "cover.jpg"
 ```
 
@@ -141,10 +154,14 @@ Apply metadata tags to audio files:
   - `title`: Track title
   - `artist`: Artist name
   - `album`: Album name
+  - `album_artist`: (Optional) Album artist name
   - `track`: Track number
-  - `album_art`: (Optional) Album artwork image file
+  - `track_total`: (Optional) Total number of tracks on the album
+  - `disk`: (Optional) Disk number for multi-disc albums
+  - `disk_total`: (Optional) Total number of disks
   - `genre`: (Optional) Genre
   - `year`: (Optional) Year
+  - `album_art`: (Optional) Album artwork image file
   - `comment`: (Optional) Comment
 
 ### Command-line Usage
@@ -176,4 +193,4 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 - Built with Rust
 - Audio processing powered by FFmpeg
-- Metadata handling via id3, metaflac, and mp4ameta crates
+- Metadata handling via lofty-rs crate for unified tag support
