@@ -38,125 +38,190 @@ The binary will be available at `target/release/soundpipeline`.
 
 ## Usage
 
-Create a YAML configuration file defining your extraction parameters:
+Create a YAML configuration file defining your processing steps:
 
 ```yaml
 # example.yml
-source: "/path/to/video.mkv"
-output_dir: "/path/to/output"
-audio_stream: 0  # Audio stream index in video file
-
-tracks:
-  - title: "Track 1"
-    artist: "Artist Name"
-    album: "Album Name"
-    start: "00:00:00"
-    end: "00:05:23"
-    track_number: 1
+steps:
+  # Extract audio from video file
+  - type: ffmpeg
+    input: "/path/to/video.mkv"
+    output: "extracted_audio.wav"
+    args: ["-vn", "-acodec", "pcm_s16le"]
   
-  - title: "Track 2"
-    artist: "Artist Name"
-    album: "Album Name"
-    start: "00:05:23"
-    end: "00:09:45"
-    track_number: 2
-
-formats:
-  - mp3:
-      bitrate: "320k"
-  - flac:
-      compression_level: 8
-  - aac:
-      bitrate: "256k"
-  - alac
+  # Split into individual tracks
+  - type: split
+    input: "extracted_audio.wav"
+    output_dir: "./splits"
+    files:
+      - file: "track_01.wav"
+        start: "0:00:00.000"
+        end: "0:05:23.000"
+      - file: "track_02.wav"
+        start: "0:05:23.000"
+        end: "0:09:45.000"
+  
+  # Convert to desired formats (format specified at runtime)
+  - type: transcode
+    input_dir: "./splits"
+    output_dir: "./transcoded"
+    files:
+      - "track_01.wav"
+      - "track_02.wav"
+  
+  # Add metadata tags
+  - type: tag
+    input_dir: "./transcoded"
+    files:
+      - file: "track_01.*"
+        title: "Track 1"
+        artist: "Artist Name"
+        album: "Album Name"
+        track: 1
+        album_art: "cover.jpg"
+      - file: "track_02.*"
+        title: "Track 2"
+        artist: "Artist Name"
+        album: "Album Name"
+        track: 2
+        album_art: "cover.jpg"
 ```
 
 Run the conversion:
 
 ```bash
-soundpipeline config.yml
+soundpipeline config.yml --format mp3 --format flac
 ```
 
 ## Configuration Format
 
-### Root Fields
+### Step Types
 
-- `source`: Path to the source video file
-- `output_dir`: Directory where output files will be saved
-- `audio_stream`: Audio stream index to extract (default: 0)
-- `tracks`: Array of track definitions
-- `formats`: Array of output format configurations
+#### ffmpeg
+Execute FFmpeg commands directly:
+- `input`: Input file path
+- `output`: Output file path
+- `args`: Array of FFmpeg arguments
 
-### Track Definition
+#### split
+Split audio files based on timestamps:
+- `input`: Source audio file
+- `output_dir`: Directory for output files
+- `files`: Array of output definitions
+  - `file`: Output filename
+  - `start`: Start timestamp (h:mm:ss.SSS format)
+  - `end`: End timestamp
 
-Each track can include:
-- `title`: Track title
-- `artist`: Artist name
-- `album`: Album name
-- `start`: Start timestamp (HH:MM:SS or HH:MM:SS.mmm)
-- `end`: End timestamp
-- `track_number`: Track number
-- `genre`: (Optional) Genre
-- `year`: (Optional) Release year
-- `comment`: (Optional) Additional comments
+#### transcode
+Convert audio files to different formats:
+- `input_dir`: Directory containing input files
+- `output_dir`: Directory for output files
+- `files`: Array of input filenames
+- Output format is specified via command-line flags
 
-### Format Configuration
-
-Supported formats and their options:
-- `mp3`: `bitrate` (e.g., "320k", "256k", "192k")
-- `aac`: `bitrate` (e.g., "256k", "192k")
-- `flac`: `compression_level` (0-12, default: 5)
-- `alac`: No additional options
+#### tag
+Apply metadata tags to audio files:
+- `input_dir`: Directory containing files to tag
+- `files`: Array of tag definitions
+  - `file`: File pattern (supports wildcards)
+  - `title`: Track title
+  - `artist`: Artist name
+  - `album`: Album name
+  - `track`: Track number
+  - `album_art`: (Optional) Album artwork image file
+  - `genre`: (Optional) Genre
+  - `year`: (Optional) Year
+  - `comment`: (Optional) Comment
 
 ## Examples
 
 ### Basic Usage
 
 ```yaml
-source: "video.mp4"
-output_dir: "./output"
-tracks:
-  - title: "Full Audio"
-    artist: "Artist Name"
-    album: "Album Name"
-    start: "00:00:00"
-    end: "01:30:00"
-formats:
-  - mp3:
-      bitrate: "320k"
+steps:
+  - type: ffmpeg
+    input: "video.mp4"
+    output: "audio.wav"
+    args: ["-vn", "-acodec", "pcm_s16le"]
+  
+  - type: transcode
+    input_dir: "."
+    output_dir: "./output"
+    files: ["audio.wav"]
+  
+  - type: tag
+    input_dir: "./output"
+    files:
+      - file: "audio.*"
+        title: "Full Audio"
+        artist: "Artist Name"
+        album: "Album Name"
+        album_art: "artwork.jpg"
 ```
 
-### Multiple Tracks with Full Metadata
+### Multiple Tracks from Video
 
 ```yaml
-source: "recording.mkv"
-output_dir: "./split_tracks"
-audio_stream: 1  # Use second audio stream
+steps:
+  # Extract second audio stream
+  - type: ffmpeg
+    input: "recording.mkv"
+    output: "full_audio.wav"
+    args: ["-map", "0:a:1", "-vn", "-acodec", "pcm_s16le"]
+  
+  # Split based on timestamps
+  - type: split
+    input: "full_audio.wav"
+    output_dir: "./splits"
+    files:
+      - file: "part_01.wav"
+        start: "0:00:00.000"
+        end: "0:02:15.000"
+      - file: "part_02.wav"
+        start: "0:02:15.000"
+        end: "0:06:45.000"
+  
+  # Convert to formats (specified at runtime)
+  - type: transcode
+    input_dir: "./splits"
+    output_dir: "./final"
+    files:
+      - "part_01.wav"
+      - "part_02.wav"
+  
+  # Apply metadata
+  - type: tag
+    input_dir: "./final"
+    files:
+      - file: "part_01.*"
+        title: "Part 1"
+        artist: "Artist Name"
+        album: "Album Title"
+        track: 1
+        genre: "Genre"
+        year: 2024
+        album_art: "cover.jpg"
+      - file: "part_02.*"
+        title: "Part 2"
+        artist: "Artist Name"
+        album: "Album Title"
+        track: 2
+        genre: "Genre"
+        year: 2024
+        album_art: "cover.jpg"
+```
 
-tracks:
-  - title: "Part 1"
-    artist: "Artist Name"
-    album: "Album Title"
-    start: "00:00:00"
-    end: "00:02:15"
-    track_number: 1
-    genre: "Genre"
-    year: 2024
-    
-  - title: "Part 2"
-    artist: "Artist Name"
-    album: "Album Title"
-    start: "00:02:15"
-    end: "00:06:45"
-    track_number: 2
-    genre: "Genre"
-    year: 2024
+### Command-line Usage
 
-formats:
-  - flac:
-      compression_level: 8
-  - mp3:
-      bitrate: "V0"  # Variable bitrate
+```bash
+# Convert to MP3 320kbps
+soundpipeline pipeline.yml --format mp3:320k
+
+# Convert to multiple formats
+soundpipeline pipeline.yml --format mp3:V0 --format flac:8 --format m4a:256k
+
+# Specify output directory
+soundpipeline pipeline.yml --output-dir ./output --format mp3
 ```
 
 ## License
