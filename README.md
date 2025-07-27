@@ -67,11 +67,11 @@ steps:
     output_dir: "./splits"
     files:
       - file: "part_01.wav"
-        start: "0:00:00.000"
-        end: "0:02:15.000"
+        start: "0:00:00.000000"
+        end: "0:02:15.000000"
       - file: "part_02.wav"
-        start: "0:02:15.000"
-        end: "0:06:45.000"
+        start: "0:02:15.000000"
+        end: "0:06:45.000000"
   
   # Convert to desired formats (format specified at runtime)
   - type: transcode
@@ -123,8 +123,8 @@ Split audio files based on timestamps:
 - `output_dir`: Directory for output files
 - `files`: Array of output definitions
   - `file`: Output filename
-  - `start`: Start timestamp (h:mm:ss.SSS format)
-  - `end`: End timestamp
+  - `start`: Start timestamp (h:mm:ss.SSS or h:mm:ss.SSSSSS format)
+  - `end`: End timestamp (h:mm:ss.SSS or h:mm:ss.SSSSSS format)
 
 #### transcode
 Convert audio files to different formats:

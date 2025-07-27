@@ -62,7 +62,7 @@ cargo doc --open
 3. **Configuration** (`src/config.rs`)
    - YAML parsing with serde_yaml
    - Step-based configuration structure
-   - Validates timestamps in h:mm:ss.SSS format (Audition CSV compatible)
+   - Validates timestamps in h:mm:ss.SSS or h:mm:ss.SSSSSS format
 
 4. **Metadata Handling** (`src/metadata/`)
    - Format-specific implementations:
@@ -82,7 +82,7 @@ cargo doc --open
 3. **Error Handling**: anyhow for application errors, thiserror for library errors
 4. **Async Operations**: tokio for concurrent file processing
 5. **Format Selection**: Output formats specified at runtime, not in config files
-6. **Timestamp Format**: Uses h:mm:ss.SSS format compatible with Adobe Audition CSV exports
+6. **Timestamp Format**: Uses h:mm:ss.SSS or h:mm:ss.SSSSSS format
 
 ### Typical Workflow
 
@@ -99,7 +99,7 @@ cargo doc --open
 
 - ffmpeg-sidecar automatically downloads and manages FFmpeg binaries
 - Use WAV (PCM) as intermediate format to preserve quality
-- Timestamp format must be h:mm:ss.SSS
+- Timestamp format must be h:mm:ss.SSS or h:mm:ss.SSSSSS
 - File patterns in tag step support wildcards (e.g., "track_01.*")
 - Output formats are specified via CLI flags, not config files
 - Ensure proper cleanup of temporary files even on errors

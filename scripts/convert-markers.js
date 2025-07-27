@@ -2,17 +2,24 @@
 
 const fs = require("fs");
 
-function parseTimeToSeconds(timeStr) {
-  // Parse MM:SS.sss or H:MM:SS.sss format to seconds
+function parseTimeToSeconds(timeStr, timeFormat = 'decimal') {
+  // Check if this is samples format
+  if (timeFormat.includes('Hz')) {
+    const sampleRate = parseInt(timeFormat.split(' ')[0]);
+    const samples = parseInt(timeStr);
+    return samples / sampleRate;
+  }
+  
+  // Parse MM:SS.sss/MM:SS.ssssss or H:MM:SS.sss/H:MM:SS.ssssss format to seconds (decimal format)
   const parts = timeStr.split(":");
   let seconds = 0;
 
   if (parts.length === 2) {
-    // MM:SS.sss format
+    // MM:SS.sss or MM:SS.ssssss format
     const [minutes, secondsAndMs] = parts;
     seconds = parseInt(minutes) * 60 + parseFloat(secondsAndMs);
   } else if (parts.length === 3) {
-    // H:MM:SS.sss format
+    // H:MM:SS.sss or H:MM:SS.ssssss format
     const [hours, minutes, secondsAndMs] = parts;
     seconds =
       parseInt(hours) * 3600 +
@@ -24,14 +31,14 @@ function parseTimeToSeconds(timeStr) {
 }
 
 function secondsToTimeFormat(seconds) {
-  // Convert seconds to h:mm:ss.SSS format
+  // Convert seconds to h:mm:ss.SSSSSS format (microsecond precision)
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
   const secs = seconds % 60;
 
   const h = hours;
   const mm = minutes.toString().padStart(2, "0");
-  const ss = secs.toFixed(3).padStart(6, "0");
+  const ss = secs.toFixed(6).padStart(9, "0"); // 6 decimal places for microseconds
 
   return `${h}:${mm}:${ss}`;
 }
@@ -65,6 +72,9 @@ function convertCsvToYaml(csvPath, outputPath = null) {
     const durationIndex = header.findIndex((col) =>
       col.toLowerCase().includes("duration")
     );
+    const timeFormatIndex = header.findIndex((col) =>
+      col.toLowerCase().includes("time format")
+    );
 
     if (nameIndex === -1 || startIndex === -1 || durationIndex === -1) {
       throw new Error("CSV must have Name, Start, and Duration columns");
@@ -83,14 +93,15 @@ function convertCsvToYaml(csvPath, outputPath = null) {
       const name = cols[nameIndex].trim();
       const startTime = cols[startIndex].trim();
       const duration = cols[durationIndex].trim();
+      const timeFormat = timeFormatIndex >= 0 ? cols[timeFormatIndex].trim() : 'decimal';
 
       if (!name || !startTime || !duration) {
         continue; // Skip empty rows
       }
 
       // Calculate start and end times
-      const startSeconds = parseTimeToSeconds(startTime);
-      const durationSeconds = parseTimeToSeconds(duration);
+      const startSeconds = parseTimeToSeconds(startTime, timeFormat);
+      const durationSeconds = parseTimeToSeconds(duration, timeFormat);
       const endSeconds = startSeconds + durationSeconds;
 
       // Generate filename from track name
