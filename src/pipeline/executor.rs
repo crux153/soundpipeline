@@ -40,6 +40,7 @@ impl Pipeline {
                         files.clone(),
                         selected_format.format.clone(),
                         selected_format.bitrate.clone(),
+                        selected_format.bit_depth,
                         encoder_availability.clone(),
                     );
                     steps.push(Box::new(step));

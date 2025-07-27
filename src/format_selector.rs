@@ -68,7 +68,7 @@ pub fn select_format(formats_config: &FormatsConfig) -> Result<SelectedFormat> {
                 .collect();
 
             let bitrate_index = Select::with_theme(&ColorfulTheme::default())
-                .with_prompt(&format!("Select bitrate for {}", format_names[selection]))
+                .with_prompt(format!("Select bitrate for {}", format_names[selection]))
                 .items(&bitrate_display_names)
                 .default(default_index)
                 .interact()?;
@@ -79,8 +79,60 @@ pub fn select_format(formats_config: &FormatsConfig) -> Result<SelectedFormat> {
         None
     };
 
+    // Ask for bit depth if format is FLAC or ALAC
+    let bit_depth = if format_option.format == "flac" || format_option.format == "alac" {
+        if let Some(bit_depths) = &format_option.bit_depths {
+            if bit_depths.len() == 1 {
+                Some(bit_depths[0])
+            } else {
+                let default_index = format_option.default_bit_depth
+                    .and_then(|default| bit_depths.iter().position(|&d| d == default))
+                    .unwrap_or(0);
+
+                // Create display names for bit depths with (Default) suffix
+                let bit_depth_display_names: Vec<String> = bit_depths
+                    .iter()
+                    .map(|&depth| {
+                        if let Some(default_depth) = format_option.default_bit_depth {
+                            if depth == default_depth {
+                                format!("{}bit (Default)", depth)
+                            } else {
+                                format!("{}bit", depth)
+                            }
+                        } else {
+                            format!("{}bit", depth)
+                        }
+                    })
+                    .collect();
+
+                let bit_depth_index = Select::with_theme(&ColorfulTheme::default())
+                    .with_prompt(format!("Select bit depth for {}", format_names[selection]))
+                    .items(&bit_depth_display_names)
+                    .default(default_index)
+                    .interact()?;
+
+                Some(bit_depths[bit_depth_index])
+            }
+        } else {
+            // If no bit depths configured, offer default choices
+            let bit_depths = [24u8, 16u8];
+            let bit_depth_display_names = vec!["24bit (Default)", "16bit"];
+            
+            let bit_depth_index = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt(format!("Select bit depth for {}", format_names[selection]))
+                .items(&bit_depth_display_names)
+                .default(0)
+                .interact()?;
+            
+            Some(bit_depths[bit_depth_index])
+        }
+    } else {
+        None
+    };
+
     Ok(SelectedFormat {
         format: format_option.format.clone(),
         bitrate,
+        bit_depth,
     })
 }

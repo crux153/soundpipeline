@@ -12,6 +12,7 @@ pub struct TranscodeStep {
     pub files: Vec<String>,
     pub format: String,
     pub bitrate: Option<String>,
+    pub bit_depth: Option<u8>,
     pub encoder_availability: EncoderAvailability,
 }
 
@@ -22,6 +23,7 @@ impl TranscodeStep {
         files: Vec<String>,
         format: String,
         bitrate: Option<String>,
+        bit_depth: Option<u8>,
         encoder_availability: EncoderAvailability,
     ) -> Self {
         Self {
@@ -30,6 +32,7 @@ impl TranscodeStep {
             files,
             format,
             bitrate,
+            bit_depth,
             encoder_availability,
         }
     }
@@ -53,12 +56,28 @@ impl TranscodeStep {
                 Ok(args)
             }
             "flac" => {
-                Ok(vec!["-acodec".to_string(), "flac".to_string()])
+                let mut args = vec!["-acodec".to_string(), "flac".to_string()];
+                if let Some(depth) = self.bit_depth {
+                    let sample_fmt = match depth {
+                        16 => "s16",
+                        24 => "s32",
+                        _ => "s32",
+                    };
+                    args.extend(["-sample_fmt".to_string(), sample_fmt.to_string()]);
+                }
+                Ok(args)
             }
             "alac" => {
-                let encoder = self.encoder_availability.get_alac_encoder();
-                let args = vec!["-acodec".to_string(), encoder.to_string()];
-                debug!("Using ALAC encoder: {}", encoder);
+                let mut args = vec!["-acodec".to_string(), "alac".to_string()];
+                if let Some(depth) = self.bit_depth {
+                    let sample_fmt = match depth {
+                        16 => "s16p",
+                        24 => "s32p",
+                        _ => "s32p",
+                    };
+                    args.extend(["-sample_fmt".to_string(), sample_fmt.to_string()]);
+                }
+                debug!("Using ALAC encoder: alac");
                 Ok(args)
             }
             _ => {
@@ -91,8 +110,8 @@ impl TranscodeStep {
 impl Step for TranscodeStep {
     async fn execute(&self, working_dir: &Path) -> Result<()> {
         info!(
-            "Executing Transcode step: {} -> {} (format: {}, bitrate: {:?})",
-            self.input_dir, self.output_dir, self.format, self.bitrate
+            "Executing Transcode step: {} -> {} (format: {}, bitrate: {:?}, bit depth: {:?})",
+            self.input_dir, self.output_dir, self.format, self.bitrate, self.bit_depth
         );
 
         let input_dir_path = working_dir.join(&self.input_dir);

@@ -13,6 +13,7 @@ SoundPipeline is a command-line tool that automates the process of:
 ## Features
 
 - **Multiple Format Support**: Convert to MP3, AAC, FLAC, and ALAC formats
+- **Bit Depth Control**: Configure 16-bit or 24-bit output for FLAC and ALAC
 - **Automated Splitting**: Split audio based on timestamp definitions
 - **Metadata Tagging**: Automatically apply ID3 tags and metadata
 - **YAML Configuration**: Define all processing parameters in a simple YAML file
@@ -51,7 +52,11 @@ formats:
       bitrates: ["320k", "256k", "192k", "128k"]
       default_bitrate: "320k"
     - format: flac
+      bit_depths: [24, 16]
+      default_bit_depth: 24
     - format: alac
+      bit_depths: [24, 16]
+      default_bit_depth: 24
   default: mp3
 
 steps:
@@ -167,8 +172,17 @@ Apply metadata tags to audio files:
 ### Command-line Usage
 
 ```bash
-# Run with configuration file
+# Run with configuration file (interactive format selection)
 soundpipeline pipeline.yml
+
+# Run with specific format and bitrate
+soundpipeline pipeline.yml --format mp3:320k
+
+# Run with FLAC and specific bit depth
+soundpipeline pipeline.yml --format flac:16bit
+
+# Run with ALAC 24-bit
+soundpipeline pipeline.yml --format alac:24bit
 
 # Run with verbose output
 soundpipeline -v pipeline.yml

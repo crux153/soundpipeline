@@ -21,6 +21,10 @@ pub struct FormatOption {
     pub bitrates: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub default_bitrate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bit_depths: Option<Vec<u8>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_bit_depth: Option<u8>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -88,4 +92,5 @@ impl Config {
 pub struct SelectedFormat {
     pub format: String,
     pub bitrate: Option<String>,
+    pub bit_depth: Option<u8>,
 }

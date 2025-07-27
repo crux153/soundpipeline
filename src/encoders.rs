@@ -19,26 +19,23 @@ pub fn check_encoder_availability() -> Result<EncoderAvailability> {
     let stdout = String::from_utf8_lossy(&output.stdout);
     
     let aac_at_available = stdout.contains("aac_at");
-    let alac_at_available = stdout.contains("alac_at");
     
-    debug!("Encoder availability - aac_at: {}, alac_at: {}", aac_at_available, alac_at_available);
+    debug!("Encoder availability - aac_at: {}", aac_at_available);
     
-    if aac_at_available || alac_at_available {
-        debug!("AudioToolbox encoders detected");
+    if aac_at_available {
+        debug!("AudioToolbox AAC encoder detected");
     } else {
-        debug!("AudioToolbox encoders not available, using standard encoders");
+        debug!("AudioToolbox AAC encoder not available, using standard AAC encoder");
     }
     
     Ok(EncoderAvailability {
         aac_at: aac_at_available,
-        alac_at: alac_at_available,
     })
 }
 
 #[derive(Debug, Clone)]
 pub struct EncoderAvailability {
     pub aac_at: bool,
-    pub alac_at: bool,
 }
 
 impl EncoderAvailability {
@@ -50,11 +47,4 @@ impl EncoderAvailability {
         }
     }
     
-    pub fn get_alac_encoder(&self) -> &'static str {
-        if self.alac_at {
-            "alac_at"
-        } else {
-            "alac"
-        }
-    }
 }

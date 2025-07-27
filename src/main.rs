@@ -19,7 +19,7 @@ struct Args {
     #[arg(short, long)]
     verbose: bool,
 
-    /// Output format (e.g., mp3, mp3:320k, flac)
+    /// Output format (e.g., mp3, mp3:320k, flac, flac:16bit, alac:24bit)
     #[arg(long)]
     format: Option<String>,
 }
@@ -61,8 +61,8 @@ async fn main() -> Result<()> {
         tracing::info!("No format specified, launching interactive selection");
         format_selector::select_format(&config.formats)?
     };
-    tracing::info!("Selected format: {} with bitrate: {:?}", 
-                   selected_format.format, selected_format.bitrate);
+    tracing::info!("Selected format: {} with bitrate: {:?}, bit depth: {:?}", 
+                   selected_format.format, selected_format.bitrate, selected_format.bit_depth);
 
     // Create and execute pipeline
     let working_dir = std::env::current_dir()?;
