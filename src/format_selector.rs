@@ -7,12 +7,23 @@ pub fn select_format(formats_config: &FormatsConfig) -> Result<SelectedFormat> {
         .available
         .iter()
         .map(|f| {
-            match &f.format[..] {
+            let display_name = match &f.format[..] {
                 "mp3" => "MP3".to_string(),
                 "aac" => "AAC (M4A)".to_string(),
                 "flac" => "FLAC (Lossless)".to_string(),
                 "alac" => "ALAC (Apple Lossless)".to_string(),
                 _ => f.format.to_uppercase(),
+            };
+            
+            // Add (Default) suffix if this is the default format
+            if let Some(default) = &formats_config.default {
+                if f.format == *default {
+                    format!("{} (Default)", display_name)
+                } else {
+                    display_name
+                }
+            } else {
+                display_name
             }
         })
         .collect();
