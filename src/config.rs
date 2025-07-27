@@ -28,6 +28,10 @@ pub struct SplitFile {
     pub file: String,
     pub start: String,
     pub end: String,
+    #[serde(skip)]
+    pub start_seconds: f64,
+    #[serde(skip)]
+    pub end_seconds: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

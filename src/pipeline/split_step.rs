@@ -2,7 +2,7 @@ use crate::config::SplitFile;
 use crate::pipeline::Step;
 use anyhow::Result;
 use async_trait::async_trait;
-use hound::{WavReader, WavWriter, SampleFormat};
+use hound::{WavReader, WavWriter};
 use std::path::Path;
 use tracing::{info, debug, warn};
 
@@ -71,6 +71,27 @@ impl Step for SplitStep {
             debug!("Created output directory: {}", output_dir_path.display());
         }
         
+        // Sort files by start time and validate no overlaps
+        let mut sorted_files = self.files.clone();
+        for file in &mut sorted_files {
+            file.start_seconds = self.parse_timestamp(&file.start)?;
+            file.end_seconds = self.parse_timestamp(&file.end)?;
+        }
+        sorted_files.sort_by(|a, b| a.start_seconds.partial_cmp(&b.start_seconds).unwrap());
+        
+        // Validate no overlapping segments
+        for i in 1..sorted_files.len() {
+            if sorted_files[i-1].end_seconds > sorted_files[i].start_seconds {
+                anyhow::bail!(
+                    "Overlapping segments detected: '{}' ends at {:.6}s but '{}' starts at {:.6}s",
+                    sorted_files[i-1].file, sorted_files[i-1].end_seconds,
+                    sorted_files[i].file, sorted_files[i].start_seconds
+                );
+            }
+        }
+        
+        info!("Processing {} splits in chronological order", sorted_files.len());
+        
         // Open input WAV file
         info!("Opening WAV file: {}", input_path.display());
         let mut reader = WavReader::open(&input_path)?;
@@ -79,31 +100,15 @@ impl Step for SplitStep {
         info!("WAV format: {} channels, {} Hz, {} bits, {} samples", 
               spec.channels, spec.sample_rate, spec.bits_per_sample, reader.len());
         
-        // Read all samples into memory
-        info!("Reading WAV samples into memory...");
-        let samples: Vec<i32> = match spec.sample_format {
-            SampleFormat::Float => {
-                reader.samples::<f32>()
-                    .collect::<Result<Vec<f32>, _>>()?
-                    .into_iter()
-                    .map(|s| (s * i32::MAX as f32) as i32)
-                    .collect()
-            }
-            SampleFormat::Int => {
-                reader.samples::<i32>()
-                    .collect::<Result<Vec<i32>, _>>()?
-            }
-        };
+        // Process splits sequentially
+        let mut current_sample_index = 0;
+        let mut samples_iter = reader.samples::<i32>();
         
-        info!("Loaded {} samples", samples.len());
-        
-        // Process each split file
-        for (i, split_file) in self.files.iter().enumerate() {
-            info!("Processing split {}/{}: {}", i + 1, self.files.len(), split_file.file);
+        for (i, split_file) in sorted_files.iter().enumerate() {
+            info!("Processing split {}/{}: {}", i + 1, sorted_files.len(), split_file.file);
             
-            // Parse timestamps
-            let start_seconds = self.parse_timestamp(&split_file.start)?;
-            let end_seconds = self.parse_timestamp(&split_file.end)?;
+            let start_seconds = split_file.start_seconds;
+            let end_seconds = split_file.end_seconds;
             
             debug!("Time range: {:.6}s to {:.6}s", start_seconds, end_seconds);
             
@@ -118,24 +123,13 @@ impl Step for SplitStep {
             debug!("Sample range: {} to {} (frames {} to {})", 
                    start_sample, end_sample, start_frame, end_frame);
             
-            // Validate range
-            if start_frame >= samples.len() {
-                warn!("Start sample {} exceeds file length {}, skipping", start_frame, samples.len());
-                continue;
+            // Skip samples until we reach the start of this segment
+            while current_sample_index < start_frame {
+                if samples_iter.next().is_none() {
+                    anyhow::bail!("Unexpected end of file while seeking to sample {}", start_frame);
+                }
+                current_sample_index += 1;
             }
-            
-            let actual_end_frame = std::cmp::min(end_frame, samples.len());
-            if end_frame > samples.len() {
-                warn!("End sample {} exceeds file length {}, truncating to {}", 
-                      end_frame, samples.len(), actual_end_frame);
-            }
-            
-            // Extract samples for this segment
-            let segment_samples = &samples[start_frame..actual_end_frame];
-            let duration_samples = (actual_end_frame - start_frame) / spec.channels as usize;
-            let duration_seconds = duration_samples as f64 / spec.sample_rate as f64;
-            
-            info!("Extracting {:.3}s ({} samples)", duration_seconds, duration_samples);
             
             // Create output file
             let output_file_path = output_dir_path.join(&split_file.file);
@@ -143,15 +137,34 @@ impl Step for SplitStep {
             
             let mut writer = WavWriter::create(&output_file_path, spec)?;
             
-            // Write samples
-            for &sample in segment_samples {
-                writer.write_sample(sample)?;
+            // Read and write samples for this segment
+            let mut samples_written = 0;
+            let target_samples = end_frame - start_frame;
+            
+            while samples_written < target_samples {
+                match samples_iter.next() {
+                    Some(Ok(sample)) => {
+                        writer.write_sample(sample)?;
+                        samples_written += 1;
+                        current_sample_index += 1;
+                    }
+                    Some(Err(e)) => return Err(e.into()),
+                    None => {
+                        warn!("End of file reached after {} samples, expected {}", 
+                              samples_written, target_samples);
+                        break;
+                    }
+                }
             }
             
             writer.finalize()?;
             
+            let duration_samples = samples_written / spec.channels as usize;
+            let duration_seconds = duration_samples as f64 / spec.sample_rate as f64;
             let file_size = std::fs::metadata(&output_file_path)?.len();
-            info!("Created: {} ({} bytes)", output_file_path.display(), file_size);
+            
+            info!("Created: {} ({:.3}s, {} bytes)", 
+                  output_file_path.display(), duration_seconds, file_size);
         }
         
         info!("Split step completed successfully");
