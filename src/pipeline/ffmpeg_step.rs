@@ -45,13 +45,16 @@ impl Step for FfmpegStep {
         // Build FFmpeg command
         let mut command = FfmpegCommand::new();
         command
-            .input(input_path.to_string_lossy())
-            .output(output_path.to_string_lossy());
+            .input(input_path.to_string_lossy());
             
-        // Add custom arguments
+        // Add custom arguments before output
         for arg in &self.args {
             command.arg(arg);
         }
+        
+        command.output(output_path.to_string_lossy());
+        
+        debug!("Full FFmpeg command will be executed with args: {:?}", self.args);
         
         // Execute FFmpeg command and wait for completion
         info!("Starting FFmpeg conversion...");
