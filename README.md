@@ -42,6 +42,18 @@ Create a YAML configuration file defining your processing steps:
 
 ```yaml
 # example.yml
+formats:
+  available:
+    - format: mp3
+      bitrates: ["320k", "256k", "192k", "128k"]
+      default_bitrate: "320k"
+    - format: aac
+      bitrates: ["256k", "192k", "128k"]
+      default_bitrate: "256k"
+    - format: flac
+    - format: alac
+  default: mp3
+
 steps:
   # Extract audio from video file
   - type: ffmpeg
@@ -90,8 +102,10 @@ steps:
 Run the conversion:
 
 ```bash
-soundpipeline config.yml --format mp3 --format flac
+soundpipeline config.yml
 ```
+
+The tool will interactively ask you to select output formats from those defined in your configuration file.
 
 ## Configuration Format
 
@@ -138,6 +152,14 @@ Apply metadata tags to audio files:
 ### Basic Usage
 
 ```yaml
+formats:
+  available:
+    - format: mp3
+      bitrates: ["320k", "256k", "192k", "128k"]
+      default_bitrate: "320k"
+    - format: flac
+  default: mp3
+
 steps:
   - type: ffmpeg
     input: "video.mp4"
@@ -162,6 +184,18 @@ steps:
 ### Multiple Tracks from Video
 
 ```yaml
+formats:
+  available:
+    - format: mp3
+      bitrates: ["320k", "256k", "192k", "128k"]
+      default_bitrate: "320k"
+    - format: aac
+      bitrates: ["256k", "192k", "128k"]
+      default_bitrate: "256k"
+    - format: flac
+    - format: alac
+  default: mp3
+
 steps:
   # Extract second audio stream
   - type: ffmpeg
@@ -214,15 +248,22 @@ steps:
 ### Command-line Usage
 
 ```bash
-# Convert to MP3 320kbps
-soundpipeline pipeline.yml --format mp3:320k
+# Run with configuration file
+soundpipeline pipeline.yml
 
-# Convert to multiple formats
-soundpipeline pipeline.yml --format mp3:V0 --format flac:8 --format m4a:256k
+# Run with verbose output
+soundpipeline -v pipeline.yml
 
-# Specify output directory
-soundpipeline pipeline.yml --output-dir ./output --format mp3
+# Dry run to see what would be done
+soundpipeline --dry-run pipeline.yml
 ```
+
+When you run the tool, it will:
+1. Load your configuration file
+2. Show available formats from your config
+3. Let you select one or more output formats
+4. If a format has multiple bitrates, ask you to choose one
+5. Process your audio files accordingly
 
 ## License
 

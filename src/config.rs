@@ -1,0 +1,83 @@
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use std::path::Path;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Config {
+    pub formats: FormatsConfig,
+    pub steps: Vec<StepConfig>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormatsConfig {
+    pub available: Vec<FormatOption>,
+    pub default: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FormatOption {
+    pub format: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub bitrates: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub default_bitrate: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SplitFile {
+    pub file: String,
+    pub start: String,
+    pub end: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TagFile {
+    pub file: String,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub track: Option<u32>,
+    pub album_art: Option<String>,
+    pub genre: Option<String>,
+    pub year: Option<u32>,
+    pub comment: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum StepConfig {
+    Ffmpeg {
+        input: String,
+        output: String,
+        #[serde(default)]
+        args: Vec<String>,
+    },
+    Split {
+        input: String,
+        output_dir: String,
+        files: Vec<SplitFile>,
+    },
+    Transcode {
+        input_dir: String,
+        output_dir: String,
+        files: Vec<String>,
+    },
+    Tag {
+        input_dir: String,
+        files: Vec<TagFile>,
+    },
+}
+
+impl Config {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let content = std::fs::read_to_string(path)?;
+        let config: Config = serde_yaml::from_str(&content)?;
+        Ok(config)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SelectedFormat {
+    pub format: String,
+    pub bitrate: Option<String>,
+}

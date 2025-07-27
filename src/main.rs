@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use soundpipeline::{config::Config, format_selector};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -42,7 +43,16 @@ fn main() -> Result<()> {
         tracing::info!("Running in dry-run mode - no files will be created");
     }
 
-    // TODO: Implement configuration loading
+    // Load configuration
+    let config = Config::from_file(&args.config)?;
+    tracing::debug!("Loaded configuration: {:#?}", config);
+
+    // Interactive format selection
+    let selected_format = format_selector::select_format(&config.formats)?;
+    tracing::info!("Selected format: {} with bitrate: {:?}", 
+                   selected_format.format, selected_format.bitrate);
+
+    // TODO: Implement pipeline execution with selected format
     // TODO: Implement audio extraction
     // TODO: Implement track splitting
     // TODO: Implement format conversion
