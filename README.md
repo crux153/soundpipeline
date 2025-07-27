@@ -55,23 +55,23 @@ formats:
   default: mp3
 
 steps:
-  # Extract audio from video file
+  # Extract second audio stream
   - type: ffmpeg
-    input: "/path/to/video.mkv"
-    output: "extracted_audio.wav"
-    args: ["-vn", "-acodec", "pcm_s16le"]
+    input: "recording.mkv"
+    output: "full_audio.wav"
+    args: ["-map", "0:a:1", "-vn", "-acodec", "pcm_s16le"]
   
-  # Split into individual tracks
+  # Split based on timestamps
   - type: split
-    input: "extracted_audio.wav"
+    input: "full_audio.wav"
     output_dir: "./splits"
     files:
-      - file: "track_01.wav"
+      - file: "part_01.wav"
         start: "0:00:00.000"
-        end: "0:05:23.000"
-      - file: "track_02.wav"
-        start: "0:05:23.000"
-        end: "0:09:45.000"
+        end: "0:02:15.000"
+      - file: "part_02.wav"
+        start: "0:02:15.000"
+        end: "0:06:45.000"
   
   # Convert to desired formats (format specified at runtime)
   - type: transcode
@@ -146,104 +146,6 @@ Apply metadata tags to audio files:
   - `genre`: (Optional) Genre
   - `year`: (Optional) Year
   - `comment`: (Optional) Comment
-
-## Examples
-
-### Basic Usage
-
-```yaml
-formats:
-  available:
-    - format: mp3
-      bitrates: ["320k", "256k", "192k", "128k"]
-      default_bitrate: "320k"
-    - format: flac
-  default: mp3
-
-steps:
-  - type: ffmpeg
-    input: "video.mp4"
-    output: "audio.wav"
-    args: ["-vn", "-acodec", "pcm_s16le"]
-  
-  - type: transcode
-    input_dir: "."
-    output_dir: "./output"
-    files: ["audio.wav"]
-  
-  - type: tag
-    input_dir: "./output"
-    files:
-      - file: "audio.*"
-        title: "Full Audio"
-        artist: "Artist Name"
-        album: "Album Name"
-        album_art: "artwork.jpg"
-```
-
-### Multiple Tracks from Video
-
-```yaml
-formats:
-  available:
-    - format: mp3
-      bitrates: ["320k", "256k", "192k", "128k"]
-      default_bitrate: "320k"
-    - format: aac
-      bitrates: ["256k", "192k", "128k"]
-      default_bitrate: "256k"
-    - format: flac
-    - format: alac
-  default: mp3
-
-steps:
-  # Extract second audio stream
-  - type: ffmpeg
-    input: "recording.mkv"
-    output: "full_audio.wav"
-    args: ["-map", "0:a:1", "-vn", "-acodec", "pcm_s16le"]
-  
-  # Split based on timestamps
-  - type: split
-    input: "full_audio.wav"
-    output_dir: "./splits"
-    files:
-      - file: "part_01.wav"
-        start: "0:00:00.000"
-        end: "0:02:15.000"
-      - file: "part_02.wav"
-        start: "0:02:15.000"
-        end: "0:06:45.000"
-  
-  # Convert to formats (specified at runtime)
-  - type: transcode
-    input_dir: "./splits"
-    output_dir: "./final"
-    files:
-      - "part_01.wav"
-      - "part_02.wav"
-  
-  # Apply metadata
-  - type: tag
-    input_dir: "./final"
-    files:
-      - file: "part_01.*"
-        title: "Part 1"
-        artist: "Artist Name"
-        album: "Album Title"
-        track: 1
-        genre: "Genre"
-        year: 2024
-        album_art: "cover.jpg"
-      - file: "part_02.*"
-        title: "Part 2"
-        artist: "Artist Name"
-        album: "Album Title"
-        track: 2
-        genre: "Genre"
-        year: 2024
-        album_art: "cover.jpg"
-```
 
 ### Command-line Usage
 
