@@ -155,9 +155,6 @@ soundpipeline pipeline.yml
 
 # Run with verbose output
 soundpipeline -v pipeline.yml
-
-# Dry run to see what would be done
-soundpipeline --dry-run pipeline.yml
 ```
 
 When you run the tool, it will:

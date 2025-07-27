@@ -17,10 +17,6 @@ struct Args {
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
-
-    /// Dry run - show what would be done without executing
-    #[arg(long)]
-    dry_run: bool,
 }
 
 fn main() -> Result<()> {
@@ -38,10 +34,6 @@ fn main() -> Result<()> {
         .init();
 
     tracing::info!("Starting SoundPipeline with config: {}", args.config.display());
-
-    if args.dry_run {
-        tracing::info!("Running in dry-run mode - no files will be created");
-    }
 
     // Load configuration
     let config = Config::from_file(&args.config)?;
