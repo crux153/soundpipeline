@@ -48,7 +48,8 @@ impl Step for FfmpegStep {
         // Build FFmpeg command
         let mut command = FfmpegCommand::new();
         command
-            .input(input_path.to_string_lossy());
+            .input(input_path.to_string_lossy())
+            .overwrite(); // Add -y flag for file overwrite
             
         // Add custom arguments before output
         for arg in &self.args {
