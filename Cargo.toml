@@ -1,0 +1,29 @@
+[package]
+name = "soundpipeline"
+version = "0.1.0"
+edition = "2021"
+authors = ["Crux <crux153@gmail.com>"]
+description = "Extract and convert audio from video files with proper tagging"
+repository = "https://github.com/crux153/soundpipeline"
+license = "MIT"
+readme = "README.md"
+
+[dependencies]
+clap = { version = "4.5", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_yaml = "0.9"
+tokio = { version = "1.40", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+indicatif = "0.17"
+id3 = "1.13"
+metaflac = "0.2"
+mp4ameta = "0.13"
+ffmpeg-sidecar = "2.0"
+
+[dev-dependencies]
+tempfile = "3.10"
+assert_cmd = "2.0"
+predicates = "3.1"
