@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use ffmpeg_sidecar::download::auto_download;
 use soundpipeline::{config::Config, format_selector, format_parser, pipeline::Pipeline};
 use std::path::PathBuf;
 
@@ -37,6 +38,11 @@ async fn main() -> Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(filter)
         .init();
+
+    // Ensure FFmpeg is available by auto-downloading if needed
+    tracing::info!("Checking FFmpeg availability...");
+    auto_download()?;
+    tracing::info!("FFmpeg is ready");
 
     tracing::info!("Starting SoundPipeline with config: {}", args.config.display());
 
