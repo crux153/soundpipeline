@@ -1,5 +1,5 @@
 use crate::config::{Config, StepConfig, SelectedFormat};
-use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep};
+use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep, transcode_step::TranscodeStep};
 use anyhow::Result;
 use std::path::Path;
 use tracing::{info, debug};
@@ -10,7 +10,7 @@ pub struct Pipeline {
 }
 
 impl Pipeline {
-    pub fn from_config(config: &Config, _selected_format: &SelectedFormat, working_dir: impl AsRef<Path>) -> Result<Self> {
+    pub fn from_config(config: &Config, selected_format: &SelectedFormat, working_dir: impl AsRef<Path>) -> Result<Self> {
         let working_dir = working_dir.as_ref().to_path_buf();
         let mut steps: Vec<Box<dyn Step>> = Vec::new();
         
@@ -32,9 +32,15 @@ impl Pipeline {
                     );
                     steps.push(Box::new(step));
                 }
-                StepConfig::Transcode { .. } => {
-                    // TODO: Implement transcode step
-                    info!("Transcode step not yet implemented, skipping");
+                StepConfig::Transcode { input_dir, output_dir, files } => {
+                    let step = TranscodeStep::new(
+                        input_dir.clone(),
+                        output_dir.clone(),
+                        files.clone(),
+                        selected_format.format.clone(),
+                        selected_format.bitrate.clone(),
+                    );
+                    steps.push(Box::new(step));
                 }
                 StepConfig::Tag { .. } => {
                     // TODO: Implement tag step
