@@ -1,6 +1,6 @@
 use crate::config::{Config, StepConfig, SelectedFormat};
 use crate::encoders::EncoderAvailability;
-use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep, transcode_step::TranscodeStep};
+use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep, transcode_step::TranscodeStep, tag_step::TagStep};
 use anyhow::Result;
 use std::path::Path;
 use tracing::{info, debug};
@@ -44,9 +44,12 @@ impl Pipeline {
                     );
                     steps.push(Box::new(step));
                 }
-                StepConfig::Tag { .. } => {
-                    // TODO: Implement tag step
-                    info!("Tag step not yet implemented, skipping");
+                StepConfig::Tag { input_dir, files } => {
+                    let step = TagStep::new(
+                        input_dir.clone(),
+                        files.clone(),
+                    );
+                    steps.push(Box::new(step));
                 }
             }
         }

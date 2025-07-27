@@ -48,8 +48,8 @@ formats:
       bitrates: ["320k", "256k", "192k", "128k"]
       default_bitrate: "320k"
     - format: aac
-      bitrates: ["256k", "192k", "128k"]
-      default_bitrate: "256k"
+      bitrates: ["320k", "256k", "192k", "128k"]
+      default_bitrate: "320k"
     - format: flac
     - format: alac
   default: mp3

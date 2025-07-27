@@ -53,22 +53,22 @@ cargo doc --open
    - `step.rs`: Step trait and implementations
    - Executes steps sequentially with proper error handling
 
-2. **Step Implementations** (`src/steps/`)
-   - `ffmpeg.rs`: Direct FFmpeg command execution via ffmpeg-sidecar
-   - `split.rs`: Audio file splitting based on timestamps
-   - `transcode.rs`: Format conversion with configurable codecs
-   - `tag.rs`: Metadata tagging for various formats
+2. **Step Implementations** (`src/pipeline/`)
+   - `ffmpeg_step.rs`: Direct FFmpeg command execution via ffmpeg-sidecar
+   - `split_step.rs`: Audio file splitting based on timestamps
+   - `transcode_step.rs`: Format conversion with configurable codecs
+   - `tag_step.rs`: Metadata tagging for various formats using lofty-rs
 
 3. **Configuration** (`src/config.rs`)
    - YAML parsing with serde_yaml
    - Step-based configuration structure
    - Validates timestamps in h:mm:ss.SSS or h:mm:ss.SSSSSS format
 
-4. **Metadata Handling** (`src/metadata/`)
-   - Format-specific implementations:
-     - MP3: id3 crate
-     - FLAC: metaflac crate
-     - M4A/AAC/ALAC: mp4ameta crate
+4. **Metadata Handling** (`src/pipeline/tag_step.rs`)
+   - Unified metadata handling using lofty-rs crate
+   - Supports all major audio formats: MP3, FLAC, M4A, AAC, ALAC
+   - Handles album artwork with automatic MIME type detection
+   - Graceful error handling for individual file failures
 
 5. **CLI Interface** (`src/main.rs`)
    - clap for argument parsing
@@ -105,3 +105,4 @@ cargo doc --open
 - Ensure proper cleanup of temporary files even on errors
 - Use structured logging with tracing for debugging
 - Each step operates on files relative to a working directory
+- Metadata tagging uses lofty-rs for unified handling across all audio formats
