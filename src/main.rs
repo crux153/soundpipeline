@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use soundpipeline::{config::Config, format_selector};
+use soundpipeline::{config::Config, format_selector, format_parser, pipeline::Pipeline};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -17,9 +17,14 @@ struct Args {
     /// Verbose output
     #[arg(short, long)]
     verbose: bool,
+
+    /// Output format (e.g., mp3, mp3:320k, flac)
+    #[arg(long)]
+    format: Option<String>,
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let args = Args::parse();
 
     // Initialize tracing
@@ -39,16 +44,21 @@ fn main() -> Result<()> {
     let config = Config::from_file(&args.config)?;
     tracing::debug!("Loaded configuration: {:#?}", config);
 
-    // Interactive format selection
-    let selected_format = format_selector::select_format(&config.formats)?;
+    // Format selection - CLI argument or interactive
+    let selected_format = if let Some(format_str) = &args.format {
+        tracing::info!("Using format specified via CLI: {}", format_str);
+        format_parser::parse_format_string(format_str, &config.formats)?
+    } else {
+        tracing::info!("No format specified, launching interactive selection");
+        format_selector::select_format(&config.formats)?
+    };
     tracing::info!("Selected format: {} with bitrate: {:?}", 
                    selected_format.format, selected_format.bitrate);
 
-    // TODO: Implement pipeline execution with selected format
-    // TODO: Implement audio extraction
-    // TODO: Implement track splitting
-    // TODO: Implement format conversion
-    // TODO: Implement metadata tagging
+    // Create and execute pipeline
+    let working_dir = std::env::current_dir()?;
+    let pipeline = Pipeline::from_config(&config, &selected_format, &working_dir)?;
+    pipeline.execute().await?;
 
     tracing::info!("SoundPipeline completed successfully");
     Ok(())
