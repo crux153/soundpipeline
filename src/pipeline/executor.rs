@@ -1,5 +1,5 @@
 use crate::config::{Config, StepConfig, SelectedFormat};
-use crate::pipeline::{Step, ffmpeg_step::FfmpegStep};
+use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep};
 use anyhow::Result;
 use std::path::Path;
 use tracing::{info, debug};
@@ -24,9 +24,13 @@ impl Pipeline {
                     );
                     steps.push(Box::new(step));
                 }
-                StepConfig::Split { .. } => {
-                    // TODO: Implement split step
-                    info!("Split step not yet implemented, skipping");
+                StepConfig::Split { input, output_dir, files } => {
+                    let step = SplitStep::new(
+                        input.clone(),
+                        output_dir.clone(),
+                        files.clone(),
+                    );
+                    steps.push(Box::new(step));
                 }
                 StepConfig::Transcode { .. } => {
                     // TODO: Implement transcode step
