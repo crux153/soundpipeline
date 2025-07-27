@@ -51,9 +51,25 @@ pub fn select_format(formats_config: &FormatsConfig) -> Result<SelectedFormat> {
                 .and_then(|default| bitrates.iter().position(|b| b == default))
                 .unwrap_or(0);
 
+            // Create display names for bitrates with (Default) suffix
+            let bitrate_display_names: Vec<String> = bitrates
+                .iter()
+                .map(|bitrate| {
+                    if let Some(default_bitrate) = &format_option.default_bitrate {
+                        if bitrate == default_bitrate {
+                            format!("{} (Default)", bitrate)
+                        } else {
+                            bitrate.clone()
+                        }
+                    } else {
+                        bitrate.clone()
+                    }
+                })
+                .collect();
+
             let bitrate_index = Select::with_theme(&ColorfulTheme::default())
                 .with_prompt(&format!("Select bitrate for {}", format_names[selection]))
-                .items(bitrates)
+                .items(&bitrate_display_names)
                 .default(default_index)
                 .interact()?;
 
