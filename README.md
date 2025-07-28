@@ -43,6 +43,9 @@ Create a YAML configuration file defining your processing steps. By default, Sou
 
 ```yaml
 # soundpipeline.yml
+syntax: "soundpipeline"
+syntax_version: 1
+
 formats:
   available:
     - format: mp3
@@ -133,6 +136,12 @@ soundpipeline config.yml
 The tool will interactively ask you to select output formats from those defined in your configuration file.
 
 ## Configuration Format
+
+### Required Fields
+
+Every configuration file must start with these fields:
+- `syntax`: Must be set to `"soundpipeline"` to identify valid configuration files
+- `syntax_version`: Must be set to `1` (current version)
 
 ### Step Types
 

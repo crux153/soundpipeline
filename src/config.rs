@@ -4,6 +4,8 @@ use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
+    pub syntax: String,
+    pub syntax_version: u32,
     pub formats: FormatsConfig,
     pub steps: Vec<StepConfig>,
 }
@@ -87,6 +89,23 @@ impl Config {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path)?;
         let config: Config = serde_yaml::from_str(&content)?;
+        
+        // Validate syntax
+        if config.syntax != "soundpipeline" {
+            anyhow::bail!(
+                "Invalid configuration syntax. Expected 'soundpipeline', found '{}'", 
+                config.syntax
+            );
+        }
+        
+        // Validate version
+        if config.syntax_version != 1 {
+            anyhow::bail!(
+                "Unsupported configuration version {}. This version of soundpipeline only supports syntax_version: 1", 
+                config.syntax_version
+            );
+        }
+        
         Ok(config)
     }
 
