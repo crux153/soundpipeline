@@ -30,7 +30,7 @@ SoundPipeline is a command-line tool that automates the process of:
 ### Building from Source
 
 ```bash
-git clone https://github.com/yourusername/soundpipeline
+git clone https://github.com/crux153/soundpipeline
 cd soundpipeline
 cargo build --release
 ```
