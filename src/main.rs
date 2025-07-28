@@ -53,16 +53,29 @@ async fn main() -> Result<()> {
     let config = Config::from_file(&args.config)?;
     tracing::debug!("Loaded configuration: {:#?}", config);
 
-    // Format selection - CLI argument or interactive
-    let selected_format = if let Some(format_str) = &args.format {
-        tracing::info!("Using format specified via CLI: {}", format_str);
-        format_parser::parse_format_string(format_str, &config.formats)?
+    // Format selection - only if transcode step exists
+    let selected_format = if config.has_transcode_step() {
+        if let Some(format_str) = &args.format {
+            tracing::info!("Using format specified via CLI: {}", format_str);
+            format_parser::parse_format_string(format_str, &config.formats)?
+        } else {
+            tracing::info!("No format specified, launching interactive selection");
+            format_selector::select_format(&config.formats)?
+        }
     } else {
-        tracing::info!("No format specified, launching interactive selection");
-        format_selector::select_format(&config.formats)?
+        tracing::info!("No transcode step found in configuration, skipping format selection");
+        // Create a default format that won't be used
+        soundpipeline::config::SelectedFormat {
+            format: String::new(),
+            bitrate: None,
+            bit_depth: None,
+        }
     };
-    tracing::info!("Selected format: {} with bitrate: {:?}, bit depth: {:?}", 
-                   selected_format.format, selected_format.bitrate, selected_format.bit_depth);
+    
+    if config.has_transcode_step() {
+        tracing::info!("Selected format: {} with bitrate: {:?}, bit depth: {:?}", 
+                       selected_format.format, selected_format.bitrate, selected_format.bit_depth);
+    }
 
     // Create and execute pipeline
     let working_dir = std::env::current_dir()?;

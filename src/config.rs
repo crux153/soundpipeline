@@ -86,6 +86,10 @@ impl Config {
         let config: Config = serde_yaml::from_str(&content)?;
         Ok(config)
     }
+
+    pub fn has_transcode_step(&self) -> bool {
+        self.steps.iter().any(|step| matches!(step, StepConfig::Transcode { .. }))
+    }
 }
 
 #[derive(Debug, Clone)]
