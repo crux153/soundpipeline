@@ -39,10 +39,10 @@ The binary will be available at `target/release/soundpipeline`.
 
 ## Usage
 
-Create a YAML configuration file defining your processing steps:
+Create a YAML configuration file defining your processing steps. By default, SoundPipeline looks for `soundpipeline.yml` in the current directory:
 
 ```yaml
-# example.yml
+# soundpipeline.yml
 formats:
   available:
     - format: mp3
@@ -186,19 +186,28 @@ Remove temporary files and directories:
 ### Command-line Usage
 
 ```bash
-# Run with configuration file (interactive format selection)
+# Run with default soundpipeline.yml in current directory
+soundpipeline
+
+# Run with specific configuration file
 soundpipeline pipeline.yml
 
 # Run with specific format and bitrate
+soundpipeline --format mp3:320k
+
+# Run with specific config and format
 soundpipeline pipeline.yml --format mp3:320k
 
 # Run with FLAC and specific bit depth
-soundpipeline pipeline.yml --format flac:16bit
+soundpipeline --format flac:16bit
 
 # Run with ALAC 24-bit
-soundpipeline pipeline.yml --format alac:24bit
+soundpipeline --format alac:24bit
 
 # Run with verbose output
+soundpipeline -v
+
+# Run with verbose output and specific config
 soundpipeline -v pipeline.yml
 ```
 

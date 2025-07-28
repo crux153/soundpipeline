@@ -11,9 +11,9 @@ use std::path::PathBuf;
     version
 )]
 struct Args {
-    /// Path to the YAML configuration file
+    /// Path to the YAML configuration file (defaults to soundpipeline.yml)
     #[arg(value_name = "CONFIG")]
-    config: PathBuf,
+    config: Option<PathBuf>,
 
     /// Verbose output
     #[arg(short, long)]
@@ -47,10 +47,22 @@ async fn main() -> Result<()> {
     // Check encoder availability
     let encoder_availability = encoders::check_encoder_availability()?;
 
-    tracing::info!("Starting SoundPipeline with config: {}", args.config.display());
+    // Determine config file path
+    let config_path = match args.config {
+        Some(path) => path,
+        None => {
+            let default_config = PathBuf::from("soundpipeline.yml");
+            if !default_config.exists() {
+                anyhow::bail!("No config file specified and default 'soundpipeline.yml' not found in current directory");
+            }
+            default_config
+        }
+    };
+
+    tracing::info!("Starting SoundPipeline with config: {}", config_path.display());
 
     // Load configuration
-    let config = Config::from_file(&args.config)?;
+    let config = Config::from_file(&config_path)?;
     tracing::debug!("Loaded configuration: {:#?}", config);
 
     // Format selection - only if transcode step exists
