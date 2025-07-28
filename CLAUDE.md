@@ -58,6 +58,7 @@ cargo doc --open
    - `split_step.rs`: Audio file splitting based on timestamps
    - `transcode_step.rs`: Format conversion with configurable codecs
    - `tag_step.rs`: Metadata tagging for various formats using lofty-rs
+   - `cleanup_step.rs`: Remove temporary files and directories
 
 3. **Configuration** (`src/config.rs`)
    - YAML parsing with serde_yaml
@@ -93,6 +94,7 @@ cargo doc --open
    - **split**: Divide audio based on timestamps
    - **transcode**: Convert to specified formats (MP3, FLAC, M4A, etc.)
    - **tag**: Apply metadata to output files
+   - **cleanup**: Remove temporary files and directories
 4. Handle errors and clean up temporary files
 
 ## Important Implementation Notes

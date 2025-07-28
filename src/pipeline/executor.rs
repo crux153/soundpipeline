@@ -1,6 +1,6 @@
 use crate::config::{Config, StepConfig, SelectedFormat};
 use crate::encoders::EncoderAvailability;
-use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep, transcode_step::TranscodeStep, tag_step::TagStep};
+use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep, transcode_step::TranscodeStep, tag_step::TagStep, cleanup_step::CleanupStep};
 use anyhow::Result;
 use std::path::Path;
 use tracing::{info, debug};
@@ -50,6 +50,10 @@ impl Pipeline {
                         input_dir.clone(),
                         files.clone(),
                     );
+                    steps.push(Box::new(step));
+                }
+                StepConfig::Cleanup { files } => {
+                    let step = CleanupStep::new(files.clone());
                     steps.push(Box::new(step));
                 }
             }

@@ -3,6 +3,7 @@ pub mod ffmpeg_step;
 pub mod split_step;
 pub mod transcode_step;
 pub mod tag_step;
+pub mod cleanup_step;
 pub mod executor;
 
 pub use step::Step;

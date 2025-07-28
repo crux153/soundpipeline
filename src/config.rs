@@ -78,6 +78,9 @@ pub enum StepConfig {
         input_dir: String,
         files: Vec<TagFile>,
     },
+    Cleanup {
+        files: Vec<String>,
+    },
 }
 
 impl Config {

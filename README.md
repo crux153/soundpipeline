@@ -115,6 +115,13 @@ steps:
         genre: "Pop"
         year: 2024
         album_art: "cover.jpg"
+  
+  # Clean up temporary files
+  - type: cleanup
+    files:
+      - "full_audio.wav"
+      - "./splits/*.wav"
+      - "temp_*"
 ```
 
 Run the conversion:
@@ -168,6 +175,13 @@ Apply metadata tags to audio files:
   - `year`: (Optional) Year
   - `album_art`: (Optional) Album artwork image file
   - `comment`: (Optional) Comment
+
+#### cleanup
+Remove temporary files and directories:
+- `files`: Array of file paths or patterns to remove
+  - Supports wildcards (e.g., "*.tmp", "temp_*")
+  - Can remove both files and directories
+  - Paths are relative to the working directory
 
 ### Command-line Usage
 
