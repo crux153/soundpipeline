@@ -1,6 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations, file_suggester, settings::Settings, ffmpeg};
+use soundpipeline::{config::Config, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations, file_suggester, settings::Settings, ffmpeg};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -47,7 +47,7 @@ async fn main() -> Result<()> {
     tracing::info!("FFmpeg is ready");
 
     // Check encoder availability
-    let encoder_availability = encoders::check_encoder_availability()?;
+    let encoder_availability = ffmpeg::check_encoder_availability()?;
 
     // Determine config file path
     let config_path = match args.config {

@@ -1,5 +1,5 @@
 use crate::config::{Config, StepConfig, SelectedFormat};
-use crate::encoders::EncoderAvailability;
+use crate::ffmpeg::EncoderAvailability;
 use crate::pipeline::{Step, ffmpeg_step::FfmpegStep, split_step::SplitStep, transcode_step::TranscodeStep, tag_step::TagStep, cleanup_step::CleanupStep};
 use anyhow::Result;
 use std::path::Path;

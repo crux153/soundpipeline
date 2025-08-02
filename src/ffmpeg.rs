@@ -1,6 +1,6 @@
 use anyhow::Result;
 use ffmpeg_sidecar::download::{ffmpeg_download_url, unpack_ffmpeg};
-use ffmpeg_sidecar::paths::sidecar_dir;
+use ffmpeg_sidecar::paths::{sidecar_dir, ffmpeg_path};
 use ffmpeg_sidecar::command::ffmpeg_is_installed;
 use ffmpeg_sidecar::ffprobe::ffprobe_path;
 use indicatif::{ProgressBar, ProgressStyle};
@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+use tracing::debug;
 
 /// Auto-download FFmpeg with progress tracking
 pub fn auto_download_with_progress() -> Result<()> {
@@ -110,6 +111,51 @@ pub fn get_file_duration(file_path: &Path) -> Result<f64> {
         .map_err(|_| anyhow::anyhow!("Failed to parse duration '{}' for file '{}'", duration_str, file_path.display()))?;
 
     Ok(duration)
+}
+
+/// Check if specific encoders are available in FFmpeg
+pub fn check_encoder_availability() -> Result<EncoderAvailability> {
+    debug!("Checking encoder availability...");
+    
+    let ffmpeg_binary = ffmpeg_path();
+    let output = Command::new(&ffmpeg_binary)
+        .arg("-encoders")
+        .output()?;
+    
+    if !output.status.success() {
+        anyhow::bail!("Failed to run ffmpeg -encoders");
+    }
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    
+    let aac_at_available = stdout.contains("aac_at");
+    
+    debug!("Encoder availability - aac_at: {}", aac_at_available);
+    
+    if aac_at_available {
+        debug!("AudioToolbox AAC encoder detected");
+    } else {
+        debug!("AudioToolbox AAC encoder not available, using standard AAC encoder");
+    }
+    
+    Ok(EncoderAvailability {
+        aac_at: aac_at_available,
+    })
+}
+
+#[derive(Debug, Clone)]
+pub struct EncoderAvailability {
+    pub aac_at: bool,
+}
+
+impl EncoderAvailability {
+    pub fn get_aac_encoder(&self) -> &'static str {
+        if self.aac_at {
+            "aac_at"
+        } else {
+            "aac"
+        }
+    }
 }
 
 #[cfg(test)]

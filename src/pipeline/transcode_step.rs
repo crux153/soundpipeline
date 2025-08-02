@@ -1,4 +1,4 @@
-use crate::encoders::EncoderAvailability;
+use crate::ffmpeg::EncoderAvailability;
 use crate::pipeline::Step;
 use anyhow::Result;
 use async_trait::async_trait;
