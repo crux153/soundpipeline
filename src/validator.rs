@@ -49,13 +49,30 @@ impl FileTree {
         }
     }
 
-    fn normalize_path(path: &Path) -> Vec<&str> {
-        let path_str = path.to_str().unwrap_or("");
-        let normalized = path_str.trim_start_matches("./");
-        normalized
-            .split('/')
-            .filter(|s| !s.is_empty() && *s != ".")
-            .collect()
+    fn normalize_path(path: &Path) -> Vec<String> {
+        let mut components = Vec::new();
+        
+        for component in path.components() {
+            match component {
+                std::path::Component::Normal(name) => {
+                    if let Some(name_str) = name.to_str() {
+                        components.push(name_str.to_string());
+                    }
+                }
+                std::path::Component::CurDir => {
+                    // Skip current directory components
+                }
+                std::path::Component::ParentDir => {
+                    // Handle parent directory - could add this logic if needed
+                    components.push("..".to_string());
+                }
+                _ => {
+                    // Skip other components like root, prefix
+                }
+            }
+        }
+        
+        components
     }
 
     fn add_file(&mut self, path: &Path) {
@@ -122,7 +139,7 @@ impl FileTree {
         let mut current = &self.root;
         
         for (i, component) in components.iter().enumerate() {
-            match current.get(*component) {
+            match current.get(component) {
                 Some(FileSystemEntry::File) => return i == components.len() - 1,
                 Some(FileSystemEntry::Directory(dir)) => {
                     if i == components.len() - 1 {
@@ -147,7 +164,7 @@ impl FileTree {
         let mut current = &self.root;
         
         for (i, component) in components.iter().enumerate() {
-            match current.get(*component) {
+            match current.get(component) {
                 Some(FileSystemEntry::File) => return i == components.len() - 1,
                 Some(FileSystemEntry::Directory(dir)) => {
                     if i == components.len() - 1 {
@@ -175,14 +192,14 @@ impl FileTree {
 
         fn remove_recursive(
             current: &mut HashMap<String, FileSystemEntry>,
-            components: &[&str],
+            components: &[String],
             index: usize,
         ) -> bool {
             if index >= components.len() {
                 return false;
             }
 
-            let component = components[index];
+            let component = &components[index];
             
             if index == components.len() - 1 {
                 // Remove the target
@@ -248,12 +265,11 @@ impl FileTree {
     }
 
     fn normalize_directory_for_pattern(dir: &Path) -> String {
-        let dir_str = dir.to_string_lossy();
-        let normalized = dir_str.trim_start_matches("./").trim_end_matches('/');
-        if normalized == "." {
+        let components = Self::normalize_path(dir);
+        if components.is_empty() {
             String::new()
         } else {
-            normalized.to_string()
+            components.join("/") // Always use / for glob patterns
         }
     }
 
@@ -568,8 +584,15 @@ mod tests {
         assert_eq!(FileTree::normalize_path(Path::new("dir/file.txt")), vec!["dir", "file.txt"]);
         assert_eq!(FileTree::normalize_path(Path::new("./dir/file.txt")), vec!["dir", "file.txt"]);
         assert_eq!(FileTree::normalize_path(Path::new("dir/subdir/file.txt")), vec!["dir", "subdir", "file.txt"]);
-        assert_eq!(FileTree::normalize_path(Path::new("")), Vec::<&str>::new());
-        assert_eq!(FileTree::normalize_path(Path::new(".")), Vec::<&str>::new());
+        assert_eq!(FileTree::normalize_path(Path::new("")), Vec::<String>::new());
+        assert_eq!(FileTree::normalize_path(Path::new(".")), Vec::<String>::new());
+        
+        // Test Windows-style paths (only on Windows where backslash is path separator)
+        #[cfg(windows)]
+        {
+            assert_eq!(FileTree::normalize_path(Path::new("dir\\file.txt")), vec!["dir", "file.txt"]);
+            assert_eq!(FileTree::normalize_path(Path::new(".\\dir\\file.txt")), vec!["dir", "file.txt"]);
+        }
     }
 
     #[test]
