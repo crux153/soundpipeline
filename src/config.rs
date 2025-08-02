@@ -248,8 +248,13 @@ steps: []
         let result = Config::from_file("nonexistent.yml");
         
         assert!(result.is_err());
-        // Should be a file not found error
-        assert!(result.unwrap_err().to_string().contains("No such file"));
+        // Should be a file not found error (ErrorKind::NotFound)
+        let error = result.unwrap_err();
+        if let Some(io_error) = error.downcast_ref::<std::io::Error>() {
+            assert_eq!(io_error.kind(), std::io::ErrorKind::NotFound);
+        } else {
+            panic!("Expected std::io::Error with NotFound kind");
+        }
     }
 
     #[test]
