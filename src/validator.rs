@@ -49,13 +49,17 @@ impl FileTree {
         }
     }
 
-    fn add_file(&mut self, path: &Path) {
+    fn normalize_path(path: &Path) -> Vec<&str> {
         let path_str = path.to_str().unwrap_or("");
         let normalized = path_str.trim_start_matches("./");
-        let components: Vec<&str> = normalized
+        normalized
             .split('/')
             .filter(|s| !s.is_empty() && *s != ".")
-            .collect();
+            .collect()
+    }
+
+    fn add_file(&mut self, path: &Path) {
+        let components = Self::normalize_path(path);
         
         if components.is_empty() {
             return;
@@ -85,12 +89,7 @@ impl FileTree {
     }
 
     fn add_directory(&mut self, path: &Path) {
-        let path_str = path.to_str().unwrap_or("");
-        let normalized = path_str.trim_start_matches("./");
-        let components: Vec<&str> = normalized
-            .split('/')
-            .filter(|s| !s.is_empty() && *s != ".")
-            .collect();
+        let components = Self::normalize_path(path);
         
         if components.is_empty() {
             return;
@@ -114,12 +113,7 @@ impl FileTree {
     }
 
     fn exists(&self, path: &Path) -> bool {
-        let path_str = path.to_str().unwrap_or("");
-        let normalized = path_str.trim_start_matches("./");
-        let components: Vec<&str> = normalized
-            .split('/')
-            .filter(|s| !s.is_empty() && *s != ".")
-            .collect();
+        let components = Self::normalize_path(path);
         
         if components.is_empty() {
             return false;
@@ -144,12 +138,7 @@ impl FileTree {
     }
 
     fn is_file(&self, path: &Path) -> bool {
-        let path_str = path.to_str().unwrap_or("");
-        let normalized = path_str.trim_start_matches("./");
-        let components: Vec<&str> = normalized
-            .split('/')
-            .filter(|s| !s.is_empty() && *s != ".")
-            .collect();
+        let components = Self::normalize_path(path);
         
         if components.is_empty() {
             return false;
@@ -178,12 +167,7 @@ impl FileTree {
     }
 
     fn remove(&mut self, path: &Path) {
-        let path_str = path.to_str().unwrap_or("");
-        let normalized = path_str.trim_start_matches("./");
-        let components: Vec<&str> = normalized
-            .split('/')
-            .filter(|s| !s.is_empty() && *s != ".")
-            .collect();
+        let components = Self::normalize_path(path);
         
         if components.is_empty() {
             return;
@@ -263,9 +247,14 @@ impl FileTree {
         results
     }
 
-    fn find_in_directory(&self, dir: &Path, pattern: &str) -> Vec<PathBuf> {
+    fn normalize_directory_for_pattern(dir: &Path) -> String {
         let dir_str = dir.to_string_lossy();
-        let normalized_dir = dir_str.trim_start_matches("./").trim_end_matches('/');
+        let normalized = dir_str.trim_start_matches("./").trim_end_matches('/');
+        normalized.to_string()
+    }
+
+    fn find_in_directory(&self, dir: &Path, pattern: &str) -> Vec<PathBuf> {
+        let normalized_dir = Self::normalize_directory_for_pattern(dir);
         
         let full_pattern = if normalized_dir.is_empty() || normalized_dir == "." {
             pattern.to_string()
