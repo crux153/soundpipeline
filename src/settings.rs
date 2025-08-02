@@ -4,6 +4,9 @@ use serde::{Deserialize, Serialize};
 /// Default duration tolerance in seconds
 const DEFAULT_DURATION_TOLERANCE: f64 = 3.0;
 
+/// Default file scan pattern for file suggester
+const DEFAULT_FILE_SCAN_PATTERN: &str = "*.mkv";
+
 /// Application settings that can be configured via YAML, environment variables, or CLI flags
 #[derive(Debug, Clone, Serialize, Deserialize, Parser)]
 #[serde(default)]
@@ -17,12 +20,23 @@ pub struct Settings {
     )]
     #[serde(default = "default_duration_tolerance")]
     pub duration_tolerance: f64,
+
+    /// File scan pattern for file suggester (glob pattern)
+    #[arg(
+        long = "file-scan-pattern",
+        env = "FILE_SCAN_PATTERN",
+        default_value = DEFAULT_FILE_SCAN_PATTERN,
+        help = "Glob pattern for scanning files in file suggester"
+    )]
+    #[serde(default = "default_file_scan_pattern")]
+    pub file_scan_pattern: String,
 }
 
 impl Default for Settings {
     fn default() -> Self {
         Self {
             duration_tolerance: DEFAULT_DURATION_TOLERANCE,
+            file_scan_pattern: DEFAULT_FILE_SCAN_PATTERN.to_string(),
         }
     }
 }
@@ -30,6 +44,11 @@ impl Default for Settings {
 /// Default value function for serde
 fn default_duration_tolerance() -> f64 {
     DEFAULT_DURATION_TOLERANCE
+}
+
+/// Default value function for serde
+fn default_file_scan_pattern() -> String {
+    DEFAULT_FILE_SCAN_PATTERN.to_string()
 }
 
 impl Settings {
@@ -42,6 +61,13 @@ impl Settings {
             // CLI/env used default value, so use YAML if different from default
             if (yaml_settings.duration_tolerance - DEFAULT_DURATION_TOLERANCE).abs() >= f64::EPSILON {
                 self.duration_tolerance = yaml_settings.duration_tolerance;
+            }
+        }
+        
+        if self.file_scan_pattern == DEFAULT_FILE_SCAN_PATTERN {
+            // CLI/env used default value, so use YAML if different from default
+            if yaml_settings.file_scan_pattern != DEFAULT_FILE_SCAN_PATTERN {
+                self.file_scan_pattern = yaml_settings.file_scan_pattern.clone();
             }
         }
         // If CLI/env provided a non-default value, keep it (it takes priority)

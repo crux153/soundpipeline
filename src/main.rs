@@ -73,7 +73,8 @@ async fn main() -> Result<()> {
     if let Some(yaml_settings) = &config.settings {
         settings.merge_with_yaml(yaml_settings);
     }
-    tracing::info!("Settings: duration_tolerance = {:.1}s", settings.duration_tolerance);
+    tracing::info!("Settings: duration_tolerance = {:.1}s, file_scan_pattern = '{}'", 
+                   settings.duration_tolerance, settings.file_scan_pattern);
 
     // Format selection - only if transcode step exists
     let selected_format = if config.has_transcode_step() {
@@ -130,7 +131,8 @@ async fn main() -> Result<()> {
                     &working_dir, 
                     &check.input_file, 
                     check.expected_seconds, 
-                    settings.duration_tolerance
+                    settings.duration_tolerance,
+                    &settings.file_scan_pattern
                 ) {
                     Ok(Some(replacement_path)) => {
                         // Update the config with the new file path

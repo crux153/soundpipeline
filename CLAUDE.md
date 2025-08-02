@@ -98,8 +98,9 @@ src/
 4. **Settings Management** (`src/settings.rs`)
    - Configurable application settings with multiple override methods
    - Duration tolerance for ffmpeg step validation (default: 3.0 seconds)
+   - File scan pattern for file suggester (default: "*.mkv")
    - Priority: CLI flags > environment variables > YAML config > defaults
-   - Automatic parsing from `--duration-tolerance` CLI flag and `DURATION_TOLERANCE` env var
+   - Automatic parsing from CLI flags and environment variables
 
 5. **Pipeline Validation** (`src/validator.rs`)
    - Pre-execution validation of pipeline configuration
@@ -121,8 +122,9 @@ src/
    - Runs before pipeline validation to enable file replacements
 
 8. **File Suggester** (`src/file_suggester.rs`)
-   - Scans working directory for alternative MKV files when duration mismatches occur
+   - Scans working directory for alternative files using configurable glob patterns
    - Finds best matching files by duration within tolerance
+   - Supports custom file patterns via settings (default: "*.mkv")
    - Prompts user for confirmation before replacing files in configuration
    - Enables automatic file correction for duration-related issues
 

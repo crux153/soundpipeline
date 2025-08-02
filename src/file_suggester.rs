@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use ffmpeg_sidecar::ffprobe::ffprobe_path;
 use dialoguer::Confirm;
+use glob::glob;
 
 /// Information about a potential replacement file
 #[derive(Debug, Clone)]
@@ -12,26 +13,27 @@ pub struct FileSuggestion {
     pub difference_seconds: f64,
 }
 
-/// Scan working directory for MKV files and get their durations
-pub fn scan_mkv_files(working_dir: &Path) -> Result<Vec<(PathBuf, f64)>> {
-    let mut mkv_files = Vec::new();
+/// Scan working directory for files matching the given pattern and get their durations
+pub fn scan_files_by_pattern(working_dir: &Path, pattern: &str) -> Result<Vec<(PathBuf, f64)>> {
+    let mut matched_files = Vec::new();
     
-    // Read directory entries
-    let entries = std::fs::read_dir(working_dir)?;
+    // Construct full glob pattern with working directory
+    let full_pattern = working_dir.join(pattern);
+    let pattern_str = full_pattern.to_string_lossy();
     
-    for entry in entries.flatten() {
-        let path = entry.path();
-        
-        // Check if it's an MKV file
-        if path.is_file() {
-            if let Some(extension) = path.extension() {
-                if extension.to_string_lossy().to_lowercase() == "mkv" {
+    tracing::debug!("Scanning for files with pattern: {}", pattern_str);
+    
+    // Use glob to find matching files
+    for entry in glob(&pattern_str)? {
+        match entry {
+            Ok(path) => {
+                if path.is_file() {
                     // Get duration using ffprobe
                     match get_file_duration(&path) {
                         Ok(duration) => {
-                            tracing::debug!("Found MKV file: {} (duration: {:.2}s)", 
+                            tracing::debug!("Found file: {} (duration: {:.2}s)", 
                                           path.display(), duration);
-                            mkv_files.push((path, duration));
+                            matched_files.push((path, duration));
                         }
                         Err(e) => {
                             tracing::warn!("Failed to get duration for {}: {}", 
@@ -40,11 +42,15 @@ pub fn scan_mkv_files(working_dir: &Path) -> Result<Vec<(PathBuf, f64)>> {
                     }
                 }
             }
+            Err(e) => {
+                tracing::warn!("Error reading glob entry: {}", e);
+            }
         }
     }
     
-    tracing::info!("Scanned working directory: found {} MKV files", mkv_files.len());
-    Ok(mkv_files)
+    tracing::info!("Scanned working directory: found {} files matching pattern '{}'", 
+                  matched_files.len(), pattern);
+    Ok(matched_files)
 }
 
 /// Get duration of a media file using ffprobe
@@ -72,15 +78,15 @@ fn get_file_duration(file_path: &Path) -> Result<f64> {
     Ok(duration)
 }
 
-/// Find the best matching MKV file by duration
+/// Find the best matching file by duration
 pub fn find_best_match(
-    mkv_files: &[(PathBuf, f64)], 
+    files: &[(PathBuf, f64)], 
     target_duration: f64, 
     tolerance: f64
 ) -> Option<FileSuggestion> {
     let mut best_match: Option<FileSuggestion> = None;
     
-    for (file_path, duration) in mkv_files {
+    for (file_path, duration) in files {
         let difference = (target_duration - duration).abs();
         
         // Only consider files within tolerance
@@ -150,6 +156,7 @@ pub fn suggest_replacement(
     original_file: &str, 
     expected_duration: f64,
     tolerance: f64,
+    scan_pattern: &str,
 ) -> Result<Option<PathBuf>> {
     // Check if original file exists
     let original_path = if Path::new(original_file).is_absolute() {
@@ -160,21 +167,21 @@ pub fn suggest_replacement(
     let file_exists = original_path.exists();
     
     if file_exists {
-        tracing::info!("Searching for alternative MKV files with similar duration (file exists but duration mismatch)...");
+        tracing::info!("Searching for alternative files with similar duration (file exists but duration mismatch)...");
     } else {
-        tracing::info!("Searching for alternative MKV files to replace missing file '{}'...", original_file);
+        tracing::info!("Searching for alternative files to replace missing file '{}'...", original_file);
     }
     
-    // Scan working directory for MKV files
-    let mkv_files = scan_mkv_files(working_dir)?;
+    // Scan working directory for files matching the pattern
+    let matched_files = scan_files_by_pattern(working_dir, scan_pattern)?;
     
-    if mkv_files.is_empty() {
-        tracing::info!("No MKV files found in working directory for replacement suggestion");
+    if matched_files.is_empty() {
+        tracing::info!("No files found matching pattern '{}' in working directory for replacement suggestion", scan_pattern);
         return Ok(None);
     }
     
     // Find best matching file
-    let best_match = find_best_match(&mkv_files, expected_duration, tolerance);
+    let best_match = find_best_match(&matched_files, expected_duration, tolerance);
     
     match best_match {
         Some(suggestion) => {
@@ -207,7 +214,7 @@ mod tests {
 
     #[test]
     fn test_find_best_match() {
-        let mkv_files = vec![
+        let files = vec![
             (PathBuf::from("file1.mkv"), 100.0),
             (PathBuf::from("file2.mkv"), 150.0),
             (PathBuf::from("file3.mkv"), 152.5),
@@ -215,7 +222,7 @@ mod tests {
         ];
         
         // Test finding best match within tolerance
-        let result = find_best_match(&mkv_files, 151.0, 3.0);
+        let result = find_best_match(&files, 151.0, 3.0);
         assert!(result.is_some());
         let suggestion = result.unwrap();
         assert_eq!(suggestion.file_path, PathBuf::from("file2.mkv"));
@@ -225,12 +232,12 @@ mod tests {
 
     #[test]
     fn test_find_best_match_exact() {
-        let mkv_files = vec![
+        let files = vec![
             (PathBuf::from("exact.mkv"), 150.0),
             (PathBuf::from("close.mkv"), 152.0),
         ];
         
-        let result = find_best_match(&mkv_files, 150.0, 3.0);
+        let result = find_best_match(&files, 150.0, 3.0);
         assert!(result.is_some());
         let suggestion = result.unwrap();
         assert_eq!(suggestion.file_path, PathBuf::from("exact.mkv"));
@@ -239,19 +246,19 @@ mod tests {
 
     #[test]
     fn test_find_best_match_no_match() {
-        let mkv_files = vec![
+        let files = vec![
             (PathBuf::from("too_short.mkv"), 100.0),
             (PathBuf::from("too_long.mkv"), 200.0),
         ];
         
-        let result = find_best_match(&mkv_files, 150.0, 3.0);
+        let result = find_best_match(&files, 150.0, 3.0);
         assert!(result.is_none());
     }
 
     #[test]
     fn test_find_best_match_empty() {
-        let mkv_files = vec![];
-        let result = find_best_match(&mkv_files, 150.0, 3.0);
+        let files = vec![];
+        let result = find_best_match(&files, 150.0, 3.0);
         assert!(result.is_none());
     }
 }

@@ -50,6 +50,7 @@ syntax_version: 1
 
 settings:
   duration_tolerance: 3.0  # Duration tolerance in seconds (optional)
+  file_scan_pattern: "*.mkv"  # Glob pattern for file suggester (optional)
 
 formats:
   available:
@@ -154,6 +155,7 @@ Every configuration file must start with these fields:
 Configure application behavior:
 - `settings`: (Optional) Application settings
   - `duration_tolerance`: (Optional) Duration tolerance in seconds for ffmpeg step validation (default: 3.0)
+  - `file_scan_pattern`: (Optional) Glob pattern for scanning files in file suggester (default: "*.mkv")
 
 ### Step Types
 
@@ -237,15 +239,21 @@ soundpipeline --duration-tolerance 5.0
 
 # Use environment variable for duration tolerance
 DURATION_TOLERANCE=4.0 soundpipeline
+
+# Run with custom file scan pattern
+soundpipeline --file-scan-pattern "*.mp4"
+
+# Use environment variable for file scan pattern
+FILE_SCAN_PATTERN="*.{mkv,mp4,avi}" soundpipeline
 ```
 
 ### Settings Priority
 
 Settings can be configured in multiple ways with the following priority (highest to lowest):
-1. **CLI flags**: `--duration-tolerance 5.0`
-2. **Environment variables**: `DURATION_TOLERANCE=4.0`
-3. **YAML configuration**: `settings.duration_tolerance: 3.0`
-4. **Default values**: Built-in defaults (3.0 seconds for duration tolerance)
+1. **CLI flags**: `--duration-tolerance 5.0` or `--file-scan-pattern "*.mp4"`
+2. **Environment variables**: `DURATION_TOLERANCE=4.0` or `FILE_SCAN_PATTERN="*.mkv"`
+3. **YAML configuration**: `settings.duration_tolerance: 3.0` or `settings.file_scan_pattern: "*.mkv"`
+4. **Default values**: Built-in defaults (3.0 seconds for duration tolerance, "*.mkv" for file scan pattern)
 
 When you run the tool, it will:
 1. Load your configuration file
