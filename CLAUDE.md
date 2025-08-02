@@ -56,7 +56,9 @@ src/
 ├── encoders.rs         # Encoder availability checking
 ├── format_parser.rs    # Format string parsing (e.g., "mp3:320k")
 ├── format_selector.rs  # Interactive format selection
-├── validator.rs        # Pipeline validation before execution
+├── validator.rs        # Pipeline validation after duration check
+├── duration_checker.rs # Duration validation using FFprobe
+├── file_suggester.rs   # Alternative file suggestion for duration mismatches
 ├── pipeline.rs         # Pipeline module definition (NOT pipeline/mod.rs)
 └── pipeline/           # Pipeline implementation modules
     ├── executor.rs     # Main Pipeline struct and execution logic
@@ -108,13 +110,19 @@ src/
    - Validates input file durations against expected values using FFprobe
    - Optional `input_duration` field in ffmpeg steps (format: h:mm:ss)
    - Configurable tolerance for duration matching (default: 3 seconds)
-   - Runs after pipeline validation but before execution
+   - Runs before pipeline validation to enable file replacements
 
-7. **CLI Interface** (`src/main.rs`)
+7. **File Suggester** (`src/file_suggester.rs`)
+   - Scans working directory for alternative MKV files when duration mismatches occur
+   - Finds best matching files by duration within tolerance
+   - Prompts user for confirmation before replacing files in configuration
+   - Enables automatic file correction for duration-related issues
+
+8. **CLI Interface** (`src/main.rs`)
    - clap for argument parsing
    - Accepts format specifications via --format flags
    - Progress tracking with indicatif
-   - Runs validation before pipeline execution
+   - Runs duration check and file suggestion before pipeline validation
 
 ### Key Design Decisions
 
@@ -129,15 +137,19 @@ src/
 
 1. Parse YAML configuration with step definitions
 2. Parse command-line format specifications
-3. **Validate pipeline configuration**:
+3. **Check duration and suggest alternatives** (for ffmpeg steps with input_duration specified):
+   - Use FFprobe to get actual file duration
+   - Compare with expected duration from configuration
+   - If mismatch exceeds tolerance (3 seconds):
+     - Scan working directory for alternative MKV files
+     - Find best matching file by duration within tolerance
+     - Prompt user for confirmation to replace file in configuration
+     - Update configuration with confirmed replacement
+4. **Validate pipeline configuration** (after potential file replacements):
    - Check if all input files exist or will be created by previous steps
    - Validate timestamp formats
    - Simulate file/directory creation and deletion
    - Verify glob patterns will match expected files
-4. **Check duration** (for ffmpeg steps with input_duration specified):
-   - Use FFprobe to get actual file duration
-   - Compare with expected duration from configuration
-   - Fail if difference exceeds tolerance (3 seconds)
 5. Execute pipeline steps sequentially:
    - **ffmpeg**: Extract audio or process video/audio files
    - **split**: Divide audio based on timestamps
@@ -163,3 +175,5 @@ src/
 - Path normalization handles `./` prefixes consistently throughout the codebase
 - Duration checking validates media file lengths against expected values using FFprobe
 - FFmpeg steps can include optional `input_duration: "h:mm:ss"` for duration validation
+- File suggestion automatically finds alternative MKV files when duration mismatches occur
+- Duration check and file suggestion run before pipeline validation to enable configuration corrections

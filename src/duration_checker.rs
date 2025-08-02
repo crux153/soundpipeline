@@ -130,6 +130,21 @@ pub fn check_durations(config: &Config, working_dir: &Path) -> Result<DurationCh
 
             // Check if file exists
             if !input_path.exists() {
+                tracing::warn!("Step {} (ffmpeg): Input file '{}' does not exist, will be handled by file suggester",
+                               idx + 1, input_path.display());
+                
+                // Create a check info with invalid status but no actual duration
+                let check_info = DurationCheckInfo {
+                    step_index: idx + 1,
+                    input_file: input.clone(),
+                    expected_duration: expected_duration.clone(),
+                    expected_seconds,
+                    actual_seconds: 0.0, // File doesn't exist
+                    difference_seconds: expected_seconds, // Max difference since file doesn't exist
+                    is_valid: false,
+                };
+                
+                result.add_check(check_info);
                 result.add_error(format!(
                     "Step {} (ffmpeg): Input file '{}' does not exist",
                     idx + 1, input_path.display()

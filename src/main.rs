@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use ffmpeg_sidecar::download::auto_download;
-use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations};
+use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations, file_suggester};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -62,7 +62,7 @@ async fn main() -> Result<()> {
     tracing::info!("Starting SoundPipeline with config: {}", config_path.display());
 
     // Load configuration
-    let config = Config::from_file(&config_path)?;
+    let mut config = Config::from_file(&config_path)?;
     tracing::debug!("Loaded configuration: {:#?}", config);
 
     // Format selection - only if transcode step exists
@@ -92,7 +92,94 @@ async fn main() -> Result<()> {
     // Get working directory
     let working_dir = std::env::current_dir()?;
     
-    // Validate pipeline before execution
+    // Check duration for ffmpeg steps with input_duration specified FIRST
+    // This may modify the config by replacing files
+    tracing::info!("Checking duration for ffmpeg steps...");
+    let duration_result = check_durations(&config, &working_dir)?;
+    
+    // Handle duration check results
+    if !duration_result.warnings.is_empty() {
+        for warning in &duration_result.warnings {
+            tracing::warn!("{}", warning);
+        }
+    }
+    
+    if !duration_result.is_valid {
+        tracing::warn!("Duration check failed with {} error(s)", duration_result.errors.len());
+        
+        // Try to find replacement files for failed checks
+        let mut config_modified = false;
+        
+        for check in &duration_result.checks {
+            if !check.is_valid {
+                tracing::info!("Attempting to find replacement for: {} (expected: {:.2}s, actual: {:.2}s)", 
+                              check.input_file, check.expected_seconds, check.actual_seconds);
+                
+                // Try to find a suitable replacement file
+                match file_suggester::suggest_replacement(
+                    &working_dir, 
+                    &check.input_file, 
+                    check.expected_seconds, 
+                    3.0  // tolerance
+                ) {
+                    Ok(Some(replacement_path)) => {
+                        // Update the config with the new file path
+                        if let Some(step) = config.steps.get_mut(check.step_index - 1) {
+                            if let soundpipeline::config::StepConfig::Ffmpeg { input, .. } = step {
+                                let old_input = input.clone();
+                                *input = replacement_path.to_string_lossy().to_string();
+                                tracing::info!("✅ Replaced '{}' with '{}'", old_input, input);
+                                config_modified = true;
+                            }
+                        }
+                    }
+                    Ok(None) => {
+                        tracing::warn!("❌ No suitable replacement found for '{}'", check.input_file);
+                    }
+                    Err(e) => {
+                        tracing::error!("Error while searching for replacement: {}", e);
+                    }
+                }
+            }
+        }
+        
+        if config_modified {
+            tracing::info!("Configuration modified with replacement files. Re-checking durations...");
+            
+            // Re-run duration check with modified config
+            let new_duration_result = check_durations(&config, &working_dir)?;
+            
+            if !new_duration_result.is_valid {
+                tracing::error!("Duration check still failed after file replacements:");
+                for error in &new_duration_result.errors {
+                    tracing::error!("  - {}", error);
+                }
+                anyhow::bail!("Duration check failed even after attempting file replacements. Please fix the errors above and try again.");
+            } else {
+                tracing::info!("✅ Duration check passed after file replacements!");
+            }
+        } else {
+            // No files were replaced, show original errors and bail
+            for error in &duration_result.errors {
+                tracing::error!("  - {}", error);
+            }
+            anyhow::bail!("Duration check failed and no suitable replacement files were found. Please fix the errors above and try again.");
+        }
+    } else {
+        // No duration check failures - show summary
+        if !duration_result.checks.is_empty() {
+            tracing::info!("Duration check completed: {} ffmpeg step(s) validated", duration_result.checks.len());
+            for check in &duration_result.checks {
+                tracing::info!("  ✓ Step {}: {} - Expected: {:.2}s, Actual: {:.2}s, Diff: {:.2}s", 
+                              check.step_index, check.input_file, check.expected_seconds, 
+                              check.actual_seconds, check.difference_seconds);
+            }
+        } else {
+            tracing::info!("Duration check successful (no ffmpeg steps with input_duration specified)");
+        }
+    }
+
+    // Now validate pipeline configuration (after potential file replacements)
     tracing::info!("Validating pipeline configuration...");
     let validation_result = validate_pipeline(&config, &selected_format, &working_dir)?;
     
@@ -112,42 +199,6 @@ async fn main() -> Result<()> {
     }
     
     tracing::info!("Pipeline validation successful");
-
-    // Check duration for ffmpeg steps with input_duration specified
-    tracing::info!("Checking duration for ffmpeg steps...");
-    let duration_result = check_durations(&config, &working_dir)?;
-    
-    // Handle duration check results
-    if !duration_result.warnings.is_empty() {
-        for warning in &duration_result.warnings {
-            tracing::warn!("{}", warning);
-        }
-    }
-    
-    if !duration_result.is_valid {
-        tracing::error!("Duration check failed with {} error(s):", duration_result.errors.len());
-        for error in &duration_result.errors {
-            tracing::error!("  - {}", error);
-        }
-        anyhow::bail!("Duration check failed. Please fix the errors above and try again.");
-    }
-    
-    if !duration_result.checks.is_empty() {
-        tracing::info!("Duration check completed: {} ffmpeg step(s) validated", duration_result.checks.len());
-        for check in &duration_result.checks {
-            if check.is_valid {
-                tracing::info!("  ✓ Step {}: {} - Expected: {:.2}s, Actual: {:.2}s, Diff: {:.2}s", 
-                              check.step_index, check.input_file, check.expected_seconds, 
-                              check.actual_seconds, check.difference_seconds);
-            } else {
-                tracing::warn!("  ✗ Step {}: {} - Expected: {:.2}s, Actual: {:.2}s, Diff: {:.2}s", 
-                              check.step_index, check.input_file, check.expected_seconds, 
-                              check.actual_seconds, check.difference_seconds);
-            }
-        }
-    } else {
-        tracing::info!("Duration check successful (no ffmpeg steps with input_duration specified)");
-    }
 
     // Create and execute pipeline
     let pipeline = Pipeline::from_config(&config, &selected_format, &working_dir, &encoder_availability)?;
