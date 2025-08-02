@@ -53,6 +53,17 @@ pub fn scan_files_by_pattern(working_dir: &Path, pattern: &str) -> Result<Vec<(P
     Ok(matched_files)
 }
 
+/// Format duration in seconds to h:mm:ss.SSS format
+fn format_duration(seconds: f64) -> String {
+    let total_seconds = seconds as u64;
+    let milliseconds = ((seconds - total_seconds as f64) * 1000.0).round() as u32;
+    let hours = total_seconds / 3600;
+    let minutes = (total_seconds % 3600) / 60;
+    let secs = total_seconds % 60;
+    
+    format!("{}:{:02}:{:02}.{:03}", hours, minutes, secs, milliseconds)
+}
+
 /// Get duration of a media file using ffprobe
 fn get_file_duration(file_path: &Path) -> Result<f64> {
     let ffprobe_path = ffprobe_path();
@@ -123,16 +134,16 @@ pub fn confirm_file_replacement(
     if file_exists {
         println!("🔍 Duration mismatch detected!");
         println!("   Original file: {}", original_file);
-        println!("   Expected duration: {:.2}s", expected_duration);
+        println!("   Expected duration: {} ({:.2}s)", format_duration(expected_duration), expected_duration);
     } else {
         println!("❌ Missing file detected!");
         println!("   Original file: {} (not found)", original_file);
-        println!("   Expected duration: {:.2}s", expected_duration);
+        println!("   Expected duration: {} ({:.2}s)", format_duration(expected_duration), expected_duration);
     }
     println!();
     println!("💡 Found a potential replacement:");
     println!("   Suggested file: {}", suggested_file.file_path.display());
-    println!("   File duration: {:.2}s", suggested_file.duration_seconds);
+    println!("   File duration: {} ({:.2}s)", format_duration(suggested_file.duration_seconds), suggested_file.duration_seconds);
     println!("   Difference from expected: {:.2}s", suggested_file.difference_seconds);
     println!();
     
@@ -260,5 +271,15 @@ mod tests {
         let files = vec![];
         let result = find_best_match(&files, 150.0, 3.0);
         assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_format_duration() {
+        assert_eq!(format_duration(0.0), "0:00:00.000");
+        assert_eq!(format_duration(30.5), "0:00:30.500");
+        assert_eq!(format_duration(60.0), "0:01:00.000");
+        assert_eq!(format_duration(90.123), "0:01:30.123");
+        assert_eq!(format_duration(3661.456), "1:01:01.456");
+        assert_eq!(format_duration(7323.789), "2:02:03.789");
     }
 }
