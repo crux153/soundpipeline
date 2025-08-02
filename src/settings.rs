@@ -93,41 +93,50 @@ mod tests {
     fn test_merge_with_yaml_default_cli() {
         let mut cli_settings = Settings {
             duration_tolerance: DEFAULT_DURATION_TOLERANCE, // CLI used default
+            file_scan_pattern: DEFAULT_FILE_SCAN_PATTERN.to_string(),
         };
         
         let yaml_settings = Settings {
             duration_tolerance: 6.0, // YAML provided different value
+            file_scan_pattern: "*.mp4".to_string(),
         };
         
         cli_settings.merge_with_yaml(&yaml_settings);
         assert_eq!(cli_settings.duration_tolerance, 6.0); // YAML used since CLI was default
+        assert_eq!(cli_settings.file_scan_pattern, "*.mp4"); // YAML used since CLI was default
     }
 
     #[test]
     fn test_merge_with_yaml_custom_cli() {
         let mut cli_settings = Settings {
             duration_tolerance: 4.0, // CLI provided custom value
+            file_scan_pattern: "*.avi".to_string(), // CLI provided custom value
         };
         
         let yaml_settings = Settings {
             duration_tolerance: 6.0, // YAML provided different value
+            file_scan_pattern: "*.mp4".to_string(), // YAML provided different value
         };
         
         cli_settings.merge_with_yaml(&yaml_settings);
         assert_eq!(cli_settings.duration_tolerance, 4.0); // CLI wins
+        assert_eq!(cli_settings.file_scan_pattern, "*.avi"); // CLI wins
     }
 
     #[test]
     fn test_merge_with_yaml_both_default() {
         let mut cli_settings = Settings {
             duration_tolerance: DEFAULT_DURATION_TOLERANCE, // CLI used default
+            file_scan_pattern: DEFAULT_FILE_SCAN_PATTERN.to_string(), // CLI used default
         };
         
         let yaml_settings = Settings {
             duration_tolerance: DEFAULT_DURATION_TOLERANCE, // YAML also has default
+            file_scan_pattern: DEFAULT_FILE_SCAN_PATTERN.to_string(), // YAML also has default
         };
         
         cli_settings.merge_with_yaml(&yaml_settings);
         assert_eq!(cli_settings.duration_tolerance, DEFAULT_DURATION_TOLERANCE); // Default value kept
+        assert_eq!(cli_settings.file_scan_pattern, DEFAULT_FILE_SCAN_PATTERN); // Default value kept
     }
 }
