@@ -44,13 +44,39 @@ cargo test test_name
 cargo doc --open
 ```
 
-## Architecture Overview
+## Project Structure
 
-### Core Components
+### Module Organization
+
+```
+src/
+├── lib.rs              # Library root - exports all public modules
+├── main.rs             # CLI entry point
+├── config.rs           # Configuration structures and parsing
+├── encoders.rs         # Encoder availability checking
+├── format_parser.rs    # Format string parsing (e.g., "mp3:320k")
+├── format_selector.rs  # Interactive format selection
+├── validator.rs        # Pipeline validation before execution
+├── pipeline.rs         # Pipeline module definition (NOT pipeline/mod.rs)
+└── pipeline/           # Pipeline implementation modules
+    ├── executor.rs     # Main Pipeline struct and execution logic
+    ├── step.rs         # Step trait definition
+    ├── ffmpeg_step.rs  # FFmpeg step implementation
+    ├── split_step.rs   # Split step implementation
+    ├── transcode_step.rs # Transcode step implementation
+    ├── tag_step.rs     # Tag step implementation
+    └── cleanup_step.rs # Cleanup step implementation
+```
+
+**Important**: The pipeline module is defined in `src/pipeline.rs`, not `src/pipeline/mod.rs`. This is a single-file module declaration pattern where `pipeline.rs` declares the submodules.
+
+### Architecture Overview
+
+#### Core Components
 
 1. **Pipeline System** (`src/pipeline/`)
-   - `pipeline.rs`: Main pipeline orchestrator
-   - `step.rs`: Step trait and implementations
+   - `executor.rs`: Contains the main `Pipeline` struct and execution logic
+   - `step.rs`: Defines the `Step` trait that all pipeline steps implement
    - Executes steps sequentially with proper error handling
 
 2. **Step Implementations** (`src/pipeline/`)
@@ -65,16 +91,24 @@ cargo doc --open
    - Step-based configuration structure
    - Validates timestamps in h:mm:ss.SSS or h:mm:ss.SSSSSS format
 
-4. **Metadata Handling** (`src/pipeline/tag_step.rs`)
+4. **Pipeline Validation** (`src/validator.rs`)
+   - Pre-execution validation of pipeline configuration
+   - Simulates file system changes through a virtual file tree
+   - Validates file dependencies between steps
+   - Supports glob pattern matching (e.g., `*.mp3`, `track_*.*`)
+   - Checks timestamp formats and required files
+
+5. **Metadata Handling** (`src/pipeline/tag_step.rs`)
    - Unified metadata handling using lofty-rs crate
    - Supports all major audio formats: MP3, FLAC, M4A, AAC, ALAC
    - Handles album artwork with automatic MIME type detection
    - Graceful error handling for individual file failures
 
-5. **CLI Interface** (`src/main.rs`)
+6. **CLI Interface** (`src/main.rs`)
    - clap for argument parsing
    - Accepts format specifications via --format flags
    - Progress tracking with indicatif
+   - Runs validation before pipeline execution
 
 ### Key Design Decisions
 
@@ -89,13 +123,18 @@ cargo doc --open
 
 1. Parse YAML configuration with step definitions
 2. Parse command-line format specifications
-3. Execute pipeline steps sequentially:
+3. **Validate pipeline configuration**:
+   - Check if all input files exist or will be created by previous steps
+   - Validate timestamp formats
+   - Simulate file/directory creation and deletion
+   - Verify glob patterns will match expected files
+4. Execute pipeline steps sequentially:
    - **ffmpeg**: Extract audio or process video/audio files
    - **split**: Divide audio based on timestamps
    - **transcode**: Convert to specified formats (MP3, FLAC, M4A, etc.)
    - **tag**: Apply metadata to output files
    - **cleanup**: Remove temporary files and directories
-4. Handle errors and clean up temporary files
+5. Handle errors and clean up temporary files
 
 ## Important Implementation Notes
 
@@ -108,3 +147,7 @@ cargo doc --open
 - Use structured logging with tracing for debugging
 - Each step operates on files relative to a working directory
 - Metadata tagging uses lofty-rs for unified handling across all audio formats
+- Pipeline validation runs before execution to catch configuration errors early
+- Validation simulates the entire pipeline execution to verify file dependencies
+- The validator uses a tree-based file system representation to track files and directories
+- Path normalization handles `./` prefixes consistently throughout the codebase

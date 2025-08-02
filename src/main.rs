@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use ffmpeg_sidecar::download::auto_download;
-use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline};
+use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -89,8 +89,31 @@ async fn main() -> Result<()> {
                        selected_format.format, selected_format.bitrate, selected_format.bit_depth);
     }
 
-    // Create and execute pipeline
+    // Get working directory
     let working_dir = std::env::current_dir()?;
+    
+    // Validate pipeline before execution
+    tracing::info!("Validating pipeline configuration...");
+    let validation_result = validate_pipeline(&config, &selected_format, &working_dir)?;
+    
+    // Handle validation results
+    if !validation_result.warnings.is_empty() {
+        for warning in &validation_result.warnings {
+            tracing::warn!("{}", warning);
+        }
+    }
+    
+    if !validation_result.is_valid {
+        tracing::error!("Pipeline validation failed with {} error(s):", validation_result.errors.len());
+        for error in &validation_result.errors {
+            tracing::error!("  - {}", error);
+        }
+        anyhow::bail!("Pipeline validation failed. Please fix the errors above and try again.");
+    }
+    
+    tracing::info!("Pipeline validation successful");
+
+    // Create and execute pipeline
     let pipeline = Pipeline::from_config(&config, &selected_format, &working_dir, &encoder_availability)?;
     pipeline.execute().await?;
 
