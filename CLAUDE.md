@@ -53,6 +53,7 @@ src/
 ├── lib.rs              # Library root - exports all public modules
 ├── main.rs             # CLI entry point
 ├── config.rs           # Configuration structures and parsing
+├── settings.rs         # Application settings with CLI/env/YAML support
 ├── encoders.rs         # Encoder availability checking
 ├── format_parser.rs    # Format string parsing (e.g., "mp3:320k")
 ├── format_selector.rs  # Interactive format selection
@@ -91,36 +92,44 @@ src/
 3. **Configuration** (`src/config.rs`)
    - YAML parsing with serde_yaml
    - Step-based configuration structure
+   - Optional settings section for application configuration
    - Validates timestamps in h:mm:ss.SSS or h:mm:ss.SSSSSS format
 
-4. **Pipeline Validation** (`src/validator.rs`)
+4. **Settings Management** (`src/settings.rs`)
+   - Configurable application settings with multiple override methods
+   - Duration tolerance for ffmpeg step validation (default: 3.0 seconds)
+   - Priority: CLI flags > environment variables > YAML config > defaults
+   - Automatic parsing from `--duration-tolerance` CLI flag and `DURATION_TOLERANCE` env var
+
+5. **Pipeline Validation** (`src/validator.rs`)
    - Pre-execution validation of pipeline configuration
    - Simulates file system changes through a virtual file tree
    - Validates file dependencies between steps
    - Supports glob pattern matching (e.g., `*.mp3`, `track_*.*`)
    - Checks timestamp formats and required files
 
-5. **Metadata Handling** (`src/pipeline/tag_step.rs`)
+6. **Metadata Handling** (`src/pipeline/tag_step.rs`)
    - Unified metadata handling using lofty-rs crate
    - Supports all major audio formats: MP3, FLAC, M4A, AAC, ALAC
    - Handles album artwork with automatic MIME type detection
    - Graceful error handling for individual file failures
 
-6. **Duration Checker** (`src/duration_checker.rs`)
+7. **Duration Checker** (`src/duration_checker.rs`)
    - Validates input file durations against expected values using FFprobe
    - Optional `input_duration` field in ffmpeg steps (format: h:mm:ss)
-   - Configurable tolerance for duration matching (default: 3 seconds)
+   - Configurable tolerance for duration matching via settings system
    - Runs before pipeline validation to enable file replacements
 
-7. **File Suggester** (`src/file_suggester.rs`)
+8. **File Suggester** (`src/file_suggester.rs`)
    - Scans working directory for alternative MKV files when duration mismatches occur
    - Finds best matching files by duration within tolerance
    - Prompts user for confirmation before replacing files in configuration
    - Enables automatic file correction for duration-related issues
 
-8. **CLI Interface** (`src/main.rs`)
+9. **CLI Interface** (`src/main.rs`)
    - clap for argument parsing
    - Accepts format specifications via --format flags
+   - Supports settings configuration via CLI flags and environment variables
    - Progress tracking with indicatif
    - Runs duration check and file suggestion before pipeline validation
 

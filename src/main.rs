@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use ffmpeg_sidecar::download::auto_download;
-use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations, file_suggester};
+use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations, file_suggester, settings::Settings};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -22,6 +22,9 @@ struct Args {
     /// Output format (e.g., mp3, mp3:320k, flac, flac:16bit, alac:24bit)
     #[arg(long)]
     format: Option<String>,
+
+    #[command(flatten)]
+    settings: Settings,
 }
 
 #[tokio::main]
@@ -65,6 +68,13 @@ async fn main() -> Result<()> {
     let mut config = Config::from_file(&config_path)?;
     tracing::debug!("Loaded configuration: {:#?}", config);
 
+    // Merge settings from CLI/env with YAML settings
+    let mut settings = args.settings;
+    if let Some(yaml_settings) = &config.settings {
+        settings.merge_with_yaml(yaml_settings);
+    }
+    tracing::info!("Settings: duration_tolerance = {:.1}s", settings.duration_tolerance);
+
     // Format selection - only if transcode step exists
     let selected_format = if config.has_transcode_step() {
         if let Some(format_str) = &args.format {
@@ -95,7 +105,7 @@ async fn main() -> Result<()> {
     // Check duration for ffmpeg steps with input_duration specified FIRST
     // This may modify the config by replacing files
     tracing::info!("Checking duration for ffmpeg steps...");
-    let duration_result = check_durations(&config, &working_dir)?;
+    let duration_result = check_durations(&config, &working_dir, settings.duration_tolerance)?;
     
     // Handle duration check results
     if !duration_result.warnings.is_empty() {
@@ -120,7 +130,7 @@ async fn main() -> Result<()> {
                     &working_dir, 
                     &check.input_file, 
                     check.expected_seconds, 
-                    3.0  // tolerance
+                    settings.duration_tolerance
                 ) {
                     Ok(Some(replacement_path)) => {
                         // Update the config with the new file path
@@ -147,7 +157,7 @@ async fn main() -> Result<()> {
             tracing::info!("Configuration modified with replacement files. Re-checking durations...");
             
             // Re-run duration check with modified config
-            let new_duration_result = check_durations(&config, &working_dir)?;
+            let new_duration_result = check_durations(&config, &working_dir, settings.duration_tolerance)?;
             
             if !new_duration_result.is_valid {
                 tracing::error!("Duration check still failed after file replacements:");

@@ -48,6 +48,9 @@ Create a YAML configuration file defining your processing steps. By default, Sou
 syntax: "soundpipeline"
 syntax_version: 1
 
+settings:
+  duration_tolerance: 3.0  # Duration tolerance in seconds (optional)
+
 formats:
   available:
     - format: mp3
@@ -146,6 +149,12 @@ Every configuration file must start with these fields:
 - `syntax`: Must be set to `"soundpipeline"` to identify valid configuration files
 - `syntax_version`: Must be set to `1` (current version)
 
+### Optional Settings Section
+
+Configure application behavior:
+- `settings`: (Optional) Application settings
+  - `duration_tolerance`: (Optional) Duration tolerance in seconds for ffmpeg step validation (default: 3.0)
+
 ### Step Types
 
 #### ffmpeg
@@ -222,17 +231,32 @@ soundpipeline -v
 
 # Run with verbose output and specific config
 soundpipeline -v pipeline.yml
+
+# Run with custom duration tolerance
+soundpipeline --duration-tolerance 5.0
+
+# Use environment variable for duration tolerance
+DURATION_TOLERANCE=4.0 soundpipeline
 ```
+
+### Settings Priority
+
+Settings can be configured in multiple ways with the following priority (highest to lowest):
+1. **CLI flags**: `--duration-tolerance 5.0`
+2. **Environment variables**: `DURATION_TOLERANCE=4.0`
+3. **YAML configuration**: `settings.duration_tolerance: 3.0`
+4. **Default values**: Built-in defaults (3.0 seconds for duration tolerance)
 
 When you run the tool, it will:
 1. Load your configuration file
-2. Show available formats from your config
-3. Let you select an output format
-4. If a format has multiple bitrates, ask you to choose one
-5. Check input file durations (if specified in ffmpeg steps)
-6. Suggest alternative files if duration mismatches are found
-7. Validate pipeline configuration and file dependencies
-8. Process your audio files accordingly
+2. Apply settings from CLI, environment variables, and YAML with proper priority
+3. Show available formats from your config
+4. Let you select an output format
+5. If a format has multiple bitrates, ask you to choose one
+6. Check input file durations (if specified in ffmpeg steps)
+7. Suggest alternative files if duration mismatches are found
+8. Validate pipeline configuration and file dependencies
+9. Process your audio files accordingly
 
 ## License
 

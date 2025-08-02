@@ -565,6 +565,7 @@ mod tests {
                 ],
                 default: Some("mp3".to_string()),
             },
+            settings: None,
             steps: vec![],
         }
     }

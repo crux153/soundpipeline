@@ -1,12 +1,15 @@
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
+use crate::settings::Settings;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     pub syntax: String,
     pub syntax_version: u32,
     pub formats: FormatsConfig,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub settings: Option<Settings>,
     pub steps: Vec<StepConfig>,
 }
 
@@ -279,6 +282,7 @@ steps: []
                 available: vec![],
                 default: None,
             },
+            settings: None,
             steps: vec![],
         };
 

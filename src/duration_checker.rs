@@ -99,7 +99,7 @@ fn get_file_duration(file_path: &Path) -> Result<f64> {
 }
 
 /// Check durations for ffmpeg steps that have input_duration specified
-pub fn check_durations(config: &Config, working_dir: &Path) -> Result<DurationCheckResult> {
+pub fn check_durations(config: &Config, working_dir: &Path, tolerance: f64) -> Result<DurationCheckResult> {
     let mut result = DurationCheckResult::new();
 
     tracing::info!("Starting duration check for ffmpeg steps...");
@@ -164,9 +164,8 @@ pub fn check_durations(config: &Config, working_dir: &Path) -> Result<DurationCh
                 }
             };
 
-            // Check if durations match within tolerance (3 seconds)
+            // Check if durations match within tolerance
             let duration_diff = (expected_seconds - actual_seconds).abs();
-            let tolerance = 3.0;
             let is_valid = duration_diff < tolerance;
 
             // Create duration check info
