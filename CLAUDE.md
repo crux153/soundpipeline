@@ -104,7 +104,13 @@ src/
    - Handles album artwork with automatic MIME type detection
    - Graceful error handling for individual file failures
 
-6. **CLI Interface** (`src/main.rs`)
+6. **Duration Checker** (`src/duration_checker.rs`)
+   - Validates input file durations against expected values using FFprobe
+   - Optional `input_duration` field in ffmpeg steps (format: h:mm:ss)
+   - Configurable tolerance for duration matching (default: 3 seconds)
+   - Runs after pipeline validation but before execution
+
+7. **CLI Interface** (`src/main.rs`)
    - clap for argument parsing
    - Accepts format specifications via --format flags
    - Progress tracking with indicatif
@@ -128,7 +134,11 @@ src/
    - Validate timestamp formats
    - Simulate file/directory creation and deletion
    - Verify glob patterns will match expected files
-4. Execute pipeline steps sequentially:
+4. **Check duration** (for ffmpeg steps with input_duration specified):
+   - Use FFprobe to get actual file duration
+   - Compare with expected duration from configuration
+   - Fail if difference exceeds tolerance (3 seconds)
+5. Execute pipeline steps sequentially:
    - **ffmpeg**: Extract audio or process video/audio files
    - **split**: Divide audio based on timestamps
    - **transcode**: Convert to specified formats (MP3, FLAC, M4A, etc.)
@@ -151,3 +161,5 @@ src/
 - Validation simulates the entire pipeline execution to verify file dependencies
 - The validator uses a tree-based file system representation to track files and directories
 - Path normalization handles `./` prefixes consistently throughout the codebase
+- Duration checking validates media file lengths against expected values using FFprobe
+- FFmpeg steps can include optional `input_duration: "h:mm:ss"` for duration validation

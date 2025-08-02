@@ -16,6 +16,7 @@ SoundPipeline is a command-line tool that automates the process of:
 - **Bit Depth Control**: Configure 16-bit or 24-bit output for FLAC and ALAC
 - **Automated Splitting**: Split audio based on timestamp definitions
 - **Metadata Tagging**: Automatically apply ID3 tags and metadata
+- **Duration Validation**: Verify input file durations match expected values before processing
 - **YAML Configuration**: Define all processing parameters in a simple YAML file
 - **FFmpeg Integration**: Leverages FFmpeg for reliable audio processing
 - **Progress Tracking**: Visual progress indicators for long operations
@@ -68,6 +69,7 @@ steps:
     input: "recording.mkv"
     output: "full_audio.wav"
     args: ["-map", "0:a:1", "-vn", "-acodec", "pcm_s16le"]
+    input_duration: "0:06:45"  # Optional: validate expected duration
   
   # Split based on timestamps
   - type: split
@@ -150,6 +152,7 @@ Execute FFmpeg commands directly:
 - `input`: Input file path
 - `output`: Output file path
 - `args`: Array of FFmpeg arguments
+- `input_duration`: (Optional) Expected duration in h:mm:ss format for validation
 
 #### split
 Split audio files based on timestamps:
@@ -223,9 +226,11 @@ soundpipeline -v pipeline.yml
 When you run the tool, it will:
 1. Load your configuration file
 2. Show available formats from your config
-3. Let you select one or more output formats
+3. Let you select an output format
 4. If a format has multiple bitrates, ask you to choose one
-5. Process your audio files accordingly
+5. Validate pipeline configuration and file dependencies
+6. Check input file durations (if specified in ffmpeg steps)
+7. Process your audio files accordingly
 
 ## License
 

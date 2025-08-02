@@ -313,7 +313,7 @@ pub fn validate_pipeline(
         debug!("Validating step {}: {:?}", idx + 1, step);
         
         match step {
-            StepConfig::Ffmpeg { input, output, args: _ } => {
+            StepConfig::Ffmpeg { input, output, args: _, input_duration: _ } => {
                 // Check if input file exists
                 if !file_tree.exists(Path::new(input)) {
                     let input_path = working_dir.join(input);
@@ -889,6 +889,7 @@ mod tests {
                 input: "input.mkv".to_string(),
                 output: "audio.wav".to_string(),
                 args: vec!["-vn".to_string()],
+                input_duration: None,
             },
             crate::config::StepConfig::Split {
                 input: "audio.wav".to_string(),
@@ -950,6 +951,7 @@ mod tests {
                 input: "nonexistent.mkv".to_string(),
                 output: "audio.wav".to_string(),
                 args: vec![],
+                input_duration: None,
             },
         ];
         
@@ -972,6 +974,7 @@ mod tests {
                 input: "input.mkv".to_string(),
                 output: "audio.wav".to_string(),
                 args: vec![],
+                input_duration: None,
             },
             crate::config::StepConfig::Split {
                 input: "audio.wav".to_string(),
@@ -1009,6 +1012,7 @@ mod tests {
                 input: "input.mkv".to_string(),
                 output: "audio.wav".to_string(),
                 args: vec![],
+                input_duration: None,
             },
             crate::config::StepConfig::Split {
                 input: "different_audio.wav".to_string(), // Wrong input
@@ -1046,6 +1050,7 @@ mod tests {
                 input: "input.mkv".to_string(),
                 output: "audio.wav".to_string(),
                 args: vec![],
+                input_duration: None,
             },
             crate::config::StepConfig::Tag {
                 input_dir: ".".to_string(),
@@ -1119,6 +1124,7 @@ mod tests {
                 input: "input.mkv".to_string(),
                 output: "audio.wav".to_string(),
                 args: vec![],
+                input_duration: None,
             },
             crate::config::StepConfig::Tag {
                 input_dir: ".".to_string(),
@@ -1169,6 +1175,7 @@ mod tests {
                 input: "input.mkv".to_string(),
                 output: "audio.wav".to_string(),
                 args: vec![],
+                input_duration: None,
             },
         ];
         
@@ -1193,6 +1200,7 @@ mod tests {
                 input: "input.mkv".to_string(),
                 output: "extracted.wav".to_string(),
                 args: vec!["-vn".to_string()],
+                input_duration: None,
             },
             crate::config::StepConfig::Split {
                 input: "extracted.wav".to_string(),

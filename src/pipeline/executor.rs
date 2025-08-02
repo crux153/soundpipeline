@@ -17,7 +17,7 @@ impl Pipeline {
         
         for step_config in &config.steps {
             match step_config {
-                StepConfig::Ffmpeg { input, output, args } => {
+                StepConfig::Ffmpeg { input, output, args, input_duration: _ } => {
                     let step = FfmpegStep::new(
                         input.clone(),
                         output.clone(),

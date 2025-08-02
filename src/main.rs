@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use ffmpeg_sidecar::download::auto_download;
-use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline};
+use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -112,6 +112,27 @@ async fn main() -> Result<()> {
     }
     
     tracing::info!("Pipeline validation successful");
+
+    // Check duration for ffmpeg steps with input_duration specified
+    tracing::info!("Checking duration for ffmpeg steps...");
+    let duration_result = check_durations(&config, &working_dir)?;
+    
+    // Handle duration check results
+    if !duration_result.warnings.is_empty() {
+        for warning in &duration_result.warnings {
+            tracing::warn!("{}", warning);
+        }
+    }
+    
+    if !duration_result.is_valid {
+        tracing::error!("Duration check failed with {} error(s):", duration_result.errors.len());
+        for error in &duration_result.errors {
+            tracing::error!("  - {}", error);
+        }
+        anyhow::bail!("Duration check failed. Please fix the errors above and try again.");
+    }
+    
+    tracing::info!("Duration check successful");
 
     // Create and execute pipeline
     let pipeline = Pipeline::from_config(&config, &selected_format, &working_dir, &encoder_availability)?;

@@ -65,6 +65,8 @@ pub enum StepConfig {
         output: String,
         #[serde(default)]
         args: Vec<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        input_duration: Option<String>,
     },
     Split {
         input: String,
@@ -288,6 +290,7 @@ steps: []
             input: "input.mkv".to_string(),
             output: "audio.wav".to_string(),
             args: vec![],
+            input_duration: None,
         });
         assert!(!config.has_transcode_step());
 
@@ -368,10 +371,11 @@ args: ["-vn", "-acodec", "pcm_s16le"]
         
         let step: StepConfig = serde_yaml::from_str(yaml).unwrap();
         
-        if let StepConfig::Ffmpeg { input, output, args } = step {
+        if let StepConfig::Ffmpeg { input, output, args, input_duration } = step {
             assert_eq!(input, "video.mkv");
             assert_eq!(output, "audio.wav");
             assert_eq!(args, vec!["-vn", "-acodec", "pcm_s16le"]);
+            assert_eq!(input_duration, None);
         } else {
             panic!("Expected Ffmpeg step");
         }
@@ -387,10 +391,33 @@ output: "audio.wav"
         
         let step: StepConfig = serde_yaml::from_str(yaml).unwrap();
         
-        if let StepConfig::Ffmpeg { input, output, args } = step {
+        if let StepConfig::Ffmpeg { input, output, args, input_duration } = step {
             assert_eq!(input, "video.mkv");
             assert_eq!(output, "audio.wav");
             assert_eq!(args, Vec::<String>::new()); // Default empty args
+            assert_eq!(input_duration, None);
+        } else {
+            panic!("Expected Ffmpeg step");
+        }
+    }
+
+    #[test]
+    fn test_step_config_ffmpeg_with_input_duration() {
+        let yaml = r#"
+type: ffmpeg
+input: "video.mkv"
+output: "audio.wav"
+args: ["-vn"]
+input_duration: "1:23:45"
+"#;
+        
+        let step: StepConfig = serde_yaml::from_str(yaml).unwrap();
+        
+        if let StepConfig::Ffmpeg { input, output, args, input_duration } = step {
+            assert_eq!(input, "video.mkv");
+            assert_eq!(output, "audio.wav");
+            assert_eq!(args, vec!["-vn"]);
+            assert_eq!(input_duration, Some("1:23:45".to_string()));
         } else {
             panic!("Expected Ffmpeg step");
         }
