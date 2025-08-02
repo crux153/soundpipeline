@@ -603,6 +603,17 @@ mod tests {
         assert_eq!(FileTree::normalize_directory_for_pattern(Path::new("./dir/")), "dir");
         assert_eq!(FileTree::normalize_directory_for_pattern(Path::new(".")), "");
         assert_eq!(FileTree::normalize_directory_for_pattern(Path::new("")), "");
+        
+        // Windows-specific tests
+        #[cfg(windows)]
+        {
+            assert_eq!(FileTree::normalize_directory_for_pattern(Path::new("dir\\")), "dir");
+            assert_eq!(FileTree::normalize_directory_for_pattern(Path::new(".\\dir")), "dir");
+            assert_eq!(FileTree::normalize_directory_for_pattern(Path::new("audio\\split")), "audio/split");
+            assert_eq!(FileTree::normalize_directory_for_pattern(Path::new(".\\")), "");
+            // Mixed separators should normalize to forward slashes for glob
+            assert_eq!(FileTree::normalize_directory_for_pattern(Path::new("audio/split\\")), "audio/split");
+        }
     }
 
     #[test]
@@ -631,6 +642,25 @@ mod tests {
         // Test non-existent files
         assert!(!tree.exists(Path::new("nonexistent.txt")));
         assert!(!tree.exists(Path::new("dir/nonexistent.txt")));
+        
+        // Windows-specific path tests
+        #[cfg(windows)]
+        {
+            // Test adding files with Windows paths
+            tree.add_file(Path::new("windows\\file.txt"));
+            tree.add_file(Path::new(".\\mixed\\path/file.txt"));
+            
+            // Test existence with different path separators
+            assert!(tree.exists(Path::new("windows\\file.txt")));
+            assert!(tree.exists(Path::new("windows/file.txt")));
+            assert!(tree.exists(Path::new("mixed\\path/file.txt")));
+            assert!(tree.exists(Path::new("mixed/path\\file.txt")));
+            
+            // Test directory existence created by Windows paths
+            assert!(tree.exists(Path::new("windows")));
+            assert!(tree.exists(Path::new("mixed\\path")));
+            assert!(tree.exists(Path::new("mixed/path")));
+        }
     }
 
     #[test]
@@ -653,6 +683,26 @@ mod tests {
         assert!(tree.is_directory(Path::new("dir1")));
         assert!(tree.is_directory(Path::new("parent")));
         assert!(tree.is_directory(Path::new("parent/child")));
+        
+        // Windows-specific directory tests
+        #[cfg(windows)]
+        {
+            // Test adding directories with Windows paths
+            tree.add_directory(Path::new("windir\\subdir"));
+            tree.add_directory(Path::new(".\\another"));
+            
+            // Test directory existence with different separators
+            assert!(tree.exists(Path::new("windir\\subdir")));
+            assert!(tree.exists(Path::new("windir/subdir")));
+            assert!(tree.exists(Path::new("windir")));
+            assert!(tree.exists(Path::new("another")));
+            assert!(tree.exists(Path::new(".\\another")));
+            
+            // Test is_directory with Windows paths
+            assert!(tree.is_directory(Path::new("windir")));
+            assert!(tree.is_directory(Path::new("windir\\subdir")));
+            assert!(tree.is_directory(Path::new("windir/subdir")));
+        }
     }
 
     #[test]
@@ -734,6 +784,26 @@ mod tests {
         assert_eq!(matches.len(), 2);
         assert!(matches.contains(&PathBuf::from("dir/track_03.mp3")));
         assert!(matches.contains(&PathBuf::from("dir/other.txt")));
+        
+        // Windows-specific path tests
+        #[cfg(windows)]
+        {
+            // Add files with Windows paths
+            tree.add_file(Path::new("windows\\track_05.mp3"));
+            tree.add_file(Path::new("subdir\\nested\\file.flac"));
+            
+            // Test wildcard matching with Windows paths
+            let matches = tree.find_matching("windows\\*.mp3");
+            assert_eq!(matches.len(), 1);
+            assert!(matches.contains(&PathBuf::from("windows/track_05.mp3")) || 
+                    matches.contains(&PathBuf::from("windows\\track_05.mp3")));
+            
+            // Test nested directory patterns with Windows paths
+            let matches = tree.find_matching("subdir\\*\\*");
+            assert_eq!(matches.len(), 1);
+            assert!(matches.contains(&PathBuf::from("subdir/nested/file.flac")) || 
+                    matches.contains(&PathBuf::from("subdir\\nested\\file.flac")));
+        }
     }
 
     #[test]
@@ -763,6 +833,30 @@ mod tests {
         // Test non-existent directory
         let matches = tree.find_in_directory(Path::new("nonexistent"), "*.mp3");
         assert_eq!(matches.len(), 0);
+        
+        // Windows-specific path tests
+        #[cfg(windows)]
+        {
+            // Add files with Windows paths
+            tree.add_file(Path::new("windir\\track_05.mp3"));
+            tree.add_file(Path::new("windir\\subdir\\track_06.flac"));
+            
+            // Test finding in Windows directory with backslashes
+            let matches = tree.find_in_directory(Path::new("windir\\"), "*.mp3");
+            assert_eq!(matches.len(), 1);
+            assert!(matches.contains(&PathBuf::from("windir/track_05.mp3")) || 
+                    matches.contains(&PathBuf::from("windir\\track_05.mp3")));
+            
+            // Test finding with mixed separators
+            let matches = tree.find_in_directory(Path::new("windir/subdir"), "*.*");
+            assert_eq!(matches.len(), 1);
+            assert!(matches.contains(&PathBuf::from("windir/subdir/track_06.flac")) || 
+                    matches.contains(&PathBuf::from("windir\\subdir\\track_06.flac")));
+            
+            // Test with .\ prefix
+            let matches = tree.find_in_directory(Path::new(".\\windir"), "*.mp3");
+            assert_eq!(matches.len(), 1);
+        }
     }
 
     #[test]
