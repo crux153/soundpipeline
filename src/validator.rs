@@ -386,33 +386,64 @@ pub fn validate_pipeline(
                     file_tree.add_directory(Path::new(output_dir));
                 }
                 
-                // Check if specified files exist in file tree
-                for file in files {
-                    let input_file = if input_dir == "." || input_dir.is_empty() {
-                        PathBuf::from(file)
-                    } else {
-                        PathBuf::from(input_dir).join(file)
-                    };
+                // Determine output format (default to mp3 if empty)
+                let output_format = if selected_format.format.is_empty() {
+                    "mp3"
+                } else {
+                    &selected_format.format
+                };
+                
+                // Get correct file extension based on format
+                let output_extension = match output_format {
+                    "mp3" => "mp3",
+                    "aac" => "m4a",
+                    "flac" => "flac",
+                    "alac" => "m4a",
+                    _ => {
+                        result.add_error(format!(
+                            "Step {} (transcode): Unsupported format '{}'",
+                            idx + 1, output_format
+                        ));
+                        continue;
+                    }
+                };
+                
+                // Process each file pattern (treat all as glob patterns)
+                for file_pattern in files {
+                    // Find matching files using glob pattern matching
+                    let matching_files = file_tree.find_in_directory(Path::new(input_dir), file_pattern);
                     
-                    if !file_tree.exists(&input_file) {
-                        let input_file_path = working_dir.join(&input_file);
-                        if !input_file_path.exists() {
-                            result.add_error(format!(
-                                "Step {} (transcode): Input file '{}' does not exist and will not be created by previous steps",
-                                idx + 1, input_file.display()
-                            ));
-                        }
+                    if matching_files.is_empty() {
+                        result.add_error(format!(
+                            "Step {} (transcode): No files matching pattern '{}' in directory '{}'",
+                            idx + 1, file_pattern, input_dir
+                        ));
+                        continue;
                     }
                     
-                    // Simulate output file creation based on selected format
-                    let base_name = file.trim_end_matches(".wav");
-                    let output_file_name = format!("{}.{}", base_name, selected_format.format);
-                    let output_file = if output_dir == "." || output_dir.is_empty() {
-                        PathBuf::from(output_file_name)
-                    } else {
-                        PathBuf::from(output_dir).join(output_file_name)
-                    };
-                    file_tree.add_file(&output_file);
+                    // Simulate output file creation for each matched file
+                    for matched_file in matching_files {
+                        // Extract the filename stem
+                        let filename = matched_file.file_name()
+                            .and_then(|n| n.to_str())
+                            .unwrap_or("");
+                        let stem = Path::new(filename)
+                            .file_stem()
+                            .and_then(|s| s.to_str())
+                            .unwrap_or(filename);
+                        
+                        // Create output filename with the correct extension
+                        let output_filename = format!("{}.{}", stem, output_extension);
+                        let output_file = if output_dir == "." || output_dir.is_empty() {
+                            PathBuf::from(output_filename)
+                        } else {
+                            PathBuf::from(output_dir).join(output_filename)
+                        };
+                        
+                        file_tree.add_file(&output_file);
+                        debug!("Step {} (transcode): Simulated output file creation: {}", 
+                              idx + 1, output_file.display());
+                    }
                 }
             }
             
