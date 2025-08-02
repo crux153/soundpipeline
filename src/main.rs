@@ -132,7 +132,22 @@ async fn main() -> Result<()> {
         anyhow::bail!("Duration check failed. Please fix the errors above and try again.");
     }
     
-    tracing::info!("Duration check successful");
+    if !duration_result.checks.is_empty() {
+        tracing::info!("Duration check completed: {} ffmpeg step(s) validated", duration_result.checks.len());
+        for check in &duration_result.checks {
+            if check.is_valid {
+                tracing::info!("  ✓ Step {}: {} - Expected: {:.2}s, Actual: {:.2}s, Diff: {:.2}s", 
+                              check.step_index, check.input_file, check.expected_seconds, 
+                              check.actual_seconds, check.difference_seconds);
+            } else {
+                tracing::warn!("  ✗ Step {}: {} - Expected: {:.2}s, Actual: {:.2}s, Diff: {:.2}s", 
+                              check.step_index, check.input_file, check.expected_seconds, 
+                              check.actual_seconds, check.difference_seconds);
+            }
+        }
+    } else {
+        tracing::info!("Duration check successful (no ffmpeg steps with input_duration specified)");
+    }
 
     // Create and execute pipeline
     let pipeline = Pipeline::from_config(&config, &selected_format, &working_dir, &encoder_availability)?;

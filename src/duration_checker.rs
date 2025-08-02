@@ -4,12 +4,25 @@ use std::process::Command;
 use ffmpeg_sidecar::ffprobe::ffprobe_path;
 use crate::config::{Config, StepConfig};
 
+/// Information about a single duration check
+#[derive(Debug, Clone)]
+pub struct DurationCheckInfo {
+    pub step_index: usize,
+    pub input_file: String,
+    pub expected_duration: String,
+    pub expected_seconds: f64,
+    pub actual_seconds: f64,
+    pub difference_seconds: f64,
+    pub is_valid: bool,
+}
+
 /// Result of duration checking
 #[derive(Debug)]
 pub struct DurationCheckResult {
     pub is_valid: bool,
     pub errors: Vec<String>,
     pub warnings: Vec<String>,
+    pub checks: Vec<DurationCheckInfo>,
 }
 
 impl DurationCheckResult {
@@ -18,7 +31,12 @@ impl DurationCheckResult {
             is_valid: true,
             errors: Vec::new(),
             warnings: Vec::new(),
+            checks: Vec::new(),
         }
+    }
+
+    pub fn add_check(&mut self, check: DurationCheckInfo) {
+        self.checks.push(check);
     }
 
     pub fn add_error(&mut self, error: String) {
@@ -134,8 +152,22 @@ pub fn check_durations(config: &Config, working_dir: &Path) -> Result<DurationCh
             // Check if durations match within tolerance (3 seconds)
             let duration_diff = (expected_seconds - actual_seconds).abs();
             let tolerance = 3.0;
+            let is_valid = duration_diff < tolerance;
 
-            if duration_diff >= tolerance {
+            // Create duration check info
+            let check_info = DurationCheckInfo {
+                step_index: idx + 1,
+                input_file: input.clone(),
+                expected_duration: expected_duration.clone(),
+                expected_seconds,
+                actual_seconds,
+                difference_seconds: duration_diff,
+                is_valid,
+            };
+            
+            result.add_check(check_info);
+
+            if !is_valid {
                 result.add_error(format!(
                     "Step {} (ffmpeg): Duration mismatch for '{}'. Expected: {:.2}s ({}) vs Actual: {:.2}s (difference: {:.2}s)",
                     idx + 1, input, expected_seconds, expected_duration, actual_seconds, duration_diff
@@ -195,6 +227,7 @@ mod tests {
         assert!(result.is_valid);
         assert_eq!(result.errors.len(), 0);
         assert_eq!(result.warnings.len(), 0);
+        assert_eq!(result.checks.len(), 0);
 
         result.add_warning("Test warning".to_string());
         assert!(result.is_valid);
@@ -203,5 +236,25 @@ mod tests {
         result.add_error("Test error".to_string());
         assert!(!result.is_valid);
         assert_eq!(result.errors.len(), 1);
+
+        // Test adding check info
+        let check_info = DurationCheckInfo {
+            step_index: 1,
+            input_file: "test.mkv".to_string(),
+            expected_duration: "0:02:30".to_string(),
+            expected_seconds: 150.0,
+            actual_seconds: 152.5,
+            difference_seconds: 2.5,
+            is_valid: true,
+        };
+        result.add_check(check_info);
+        assert_eq!(result.checks.len(), 1);
+        assert_eq!(result.checks[0].step_index, 1);
+        assert_eq!(result.checks[0].input_file, "test.mkv");
+        assert_eq!(result.checks[0].expected_duration, "0:02:30");
+        assert_eq!(result.checks[0].expected_seconds, 150.0);
+        assert_eq!(result.checks[0].actual_seconds, 152.5);
+        assert_eq!(result.checks[0].difference_seconds, 2.5);
+        assert!(result.checks[0].is_valid);
     }
 }
