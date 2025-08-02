@@ -162,12 +162,13 @@ pub fn confirm_file_replacement(
 }
 
 /// Get suggested replacement for a file with duration mismatch or missing file
-pub fn suggest_replacement(
+/// Uses pre-scanned files for efficiency when called multiple times
+pub fn suggest_replacement_with_files(
     working_dir: &Path,
     original_file: &str, 
     expected_duration: f64,
     tolerance: f64,
-    scan_pattern: &str,
+    matched_files: &[(PathBuf, f64)],
 ) -> Result<Option<PathBuf>> {
     // Check if original file exists
     let original_path = if Path::new(original_file).is_absolute() {
@@ -183,16 +184,13 @@ pub fn suggest_replacement(
         tracing::info!("Searching for alternative files to replace missing file '{}'...", original_file);
     }
     
-    // Scan working directory for files matching the pattern
-    let matched_files = scan_files_by_pattern(working_dir, scan_pattern)?;
-    
     if matched_files.is_empty() {
-        tracing::info!("No files found matching pattern '{}' in working directory for replacement suggestion", scan_pattern);
+        tracing::info!("No pre-scanned files available for replacement suggestion");
         return Ok(None);
     }
     
     // Find best matching file
-    let best_match = find_best_match(&matched_files, expected_duration, tolerance);
+    let best_match = find_best_match(matched_files, expected_duration, tolerance);
     
     match best_match {
         Some(suggestion) => {
@@ -217,6 +215,21 @@ pub fn suggest_replacement(
             Ok(None)
         }
     }
+}
+
+/// Get suggested replacement for a file with duration mismatch or missing file
+/// This is a convenience function that scans files on-demand (less efficient for multiple calls)
+pub fn suggest_replacement(
+    working_dir: &Path,
+    original_file: &str, 
+    expected_duration: f64,
+    tolerance: f64,
+    scan_pattern: &str,
+) -> Result<Option<PathBuf>> {
+    // Scan working directory for files matching the pattern
+    let matched_files = scan_files_by_pattern(working_dir, scan_pattern)?;
+    
+    suggest_replacement_with_files(working_dir, original_file, expected_duration, tolerance, &matched_files)
 }
 
 #[cfg(test)]

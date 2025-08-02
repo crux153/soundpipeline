@@ -118,6 +118,11 @@ async fn main() -> Result<()> {
     if !duration_result.is_valid {
         tracing::warn!("Duration check failed with {} error(s)", duration_result.errors.len());
         
+        // Scan files once for all replacement attempts (more efficient)
+        tracing::info!("Scanning for potential replacement files with pattern: '{}'", settings.file_scan_pattern);
+        let matched_files = file_suggester::scan_files_by_pattern(&working_dir, &settings.file_scan_pattern)?;
+        tracing::info!("Found {} potential replacement files", matched_files.len());
+        
         // Try to find replacement files for failed checks
         let mut config_modified = false;
         
@@ -126,13 +131,13 @@ async fn main() -> Result<()> {
                 tracing::info!("Attempting to find replacement for: {} (expected: {:.2}s, actual: {:.2}s)", 
                               check.input_file, check.expected_seconds, check.actual_seconds);
                 
-                // Try to find a suitable replacement file
-                match file_suggester::suggest_replacement(
+                // Try to find a suitable replacement file using pre-scanned files
+                match file_suggester::suggest_replacement_with_files(
                     &working_dir, 
                     &check.input_file, 
                     check.expected_seconds, 
                     settings.duration_tolerance,
-                    &settings.file_scan_pattern
+                    &matched_files
                 ) {
                     Ok(Some(replacement_path)) => {
                         // Update the config with the new file path
