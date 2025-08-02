@@ -1,6 +1,6 @@
 [package]
 name = "soundpipeline"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Crux <crux153@gmail.com>"]
 description = "Extract and convert audio from video files with proper tagging"
