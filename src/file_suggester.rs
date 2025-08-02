@@ -1,9 +1,8 @@
 use anyhow::Result;
 use std::path::{Path, PathBuf};
-use std::process::Command;
-use ffmpeg_sidecar::ffprobe::ffprobe_path;
 use dialoguer::Confirm;
 use glob::glob;
+use crate::ffmpeg;
 
 /// Information about a potential replacement file
 #[derive(Debug, Clone)]
@@ -29,7 +28,7 @@ pub fn scan_files_by_pattern(working_dir: &Path, pattern: &str) -> Result<Vec<(P
             Ok(path) => {
                 if path.is_file() {
                     // Get duration using ffprobe
-                    match get_file_duration(&path) {
+                    match ffmpeg::get_file_duration(&path) {
                         Ok(duration) => {
                             tracing::debug!("Found file: {} (duration: {:.2}s)", 
                                           path.display(), duration);
@@ -64,30 +63,6 @@ fn format_duration(seconds: f64) -> String {
     format!("{}:{:02}:{:02}.{:03}", hours, minutes, secs, milliseconds)
 }
 
-/// Get duration of a media file using ffprobe
-fn get_file_duration(file_path: &Path) -> Result<f64> {
-    let ffprobe_path = ffprobe_path();
-    
-    let output = Command::new(ffprobe_path)
-        .args([
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-        ])
-        .arg(file_path)
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("ffprobe failed for file '{}': {}", file_path.display(), stderr);
-    }
-
-    let duration_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let duration: f64 = duration_str.parse()
-        .map_err(|_| anyhow::anyhow!("Failed to parse duration '{}' for file '{}'", duration_str, file_path.display()))?;
-
-    Ok(duration)
-}
 
 /// Find the best matching file by duration
 pub fn find_best_match(

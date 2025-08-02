@@ -2,10 +2,12 @@ use anyhow::Result;
 use ffmpeg_sidecar::download::{ffmpeg_download_url, unpack_ffmpeg};
 use ffmpeg_sidecar::paths::sidecar_dir;
 use ffmpeg_sidecar::command::ffmpeg_is_installed;
+use ffmpeg_sidecar::ffprobe::ffprobe_path;
 use indicatif::{ProgressBar, ProgressStyle};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
+use std::process::Command;
 
 /// Auto-download FFmpeg with progress tracking
 pub fn auto_download_with_progress() -> Result<()> {
@@ -83,6 +85,31 @@ fn download_ffmpeg_package_with_progress(url: &str, destination: &Path) -> Resul
     pb.finish_with_message("FFmpeg download completed");
     
     Ok(file_path)
+}
+
+/// Get duration of a media file using ffprobe
+pub fn get_file_duration(file_path: &Path) -> Result<f64> {
+    let ffprobe_path = ffprobe_path();
+    
+    let output = Command::new(ffprobe_path)
+        .args([
+            "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+        ])
+        .arg(file_path)
+        .output()?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        anyhow::bail!("ffprobe failed for file '{}': {}", file_path.display(), stderr);
+    }
+
+    let duration_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let duration: f64 = duration_str.parse()
+        .map_err(|_| anyhow::anyhow!("Failed to parse duration '{}' for file '{}'", duration_str, file_path.display()))?;
+
+    Ok(duration)
 }
 
 #[cfg(test)]

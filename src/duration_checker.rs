@@ -1,8 +1,7 @@
 use anyhow::Result;
 use std::path::Path;
-use std::process::Command;
-use ffmpeg_sidecar::ffprobe::ffprobe_path;
 use crate::config::{Config, StepConfig};
+use crate::ffmpeg;
 
 /// Information about a single duration check
 #[derive(Debug, Clone)]
@@ -73,30 +72,6 @@ fn parse_time_to_seconds(time_str: &str) -> Result<f64> {
     Ok(hours * 3600.0 + minutes * 60.0 + seconds)
 }
 
-/// Get duration of a media file using ffprobe
-fn get_file_duration(file_path: &Path) -> Result<f64> {
-    let ffprobe_path = ffprobe_path();
-    
-    let output = Command::new(ffprobe_path)
-        .args([
-            "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-        ])
-        .arg(file_path)
-        .output()?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        anyhow::bail!("ffprobe failed for file '{}': {}", file_path.display(), stderr);
-    }
-
-    let duration_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-    let duration: f64 = duration_str.parse()
-        .map_err(|_| anyhow::anyhow!("Failed to parse duration '{}' for file '{}'", duration_str, file_path.display()))?;
-
-    Ok(duration)
-}
 
 /// Check durations for ffmpeg steps that have input_duration specified
 pub fn check_durations(config: &Config, working_dir: &Path, tolerance: f64) -> Result<DurationCheckResult> {
@@ -153,7 +128,7 @@ pub fn check_durations(config: &Config, working_dir: &Path, tolerance: f64) -> R
             }
 
             // Get actual duration using ffprobe
-            let actual_seconds = match get_file_duration(&input_path) {
+            let actual_seconds = match ffmpeg::get_file_duration(&input_path) {
                 Ok(duration) => duration,
                 Err(e) => {
                     result.add_error(format!(
