@@ -9,10 +9,10 @@ use std::path::{Path, PathBuf};
 
 /// Auto-download FFmpeg with progress tracking
 pub fn auto_download_with_progress() -> Result<()> {
-    // if ffmpeg_is_installed() {
-    //     tracing::info!("FFmpeg is already installed");
-    //     return Ok(());
-    // }
+    if ffmpeg_is_installed() {
+        tracing::info!("FFmpeg is already installed");
+        return Ok(());
+    }
 
     tracing::info!("FFmpeg not found, downloading...");
 
