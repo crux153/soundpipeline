@@ -1,7 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
-use ffmpeg_sidecar::download::auto_download;
-use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations, file_suggester, settings::Settings};
+use soundpipeline::{config::Config, encoders, format_selector, format_parser, pipeline::Pipeline, validator::validate_pipeline, duration_checker::check_durations, file_suggester, settings::Settings, ffmpeg};
 use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
@@ -44,7 +43,7 @@ async fn main() -> Result<()> {
 
     // Ensure FFmpeg is available by auto-downloading if needed
     tracing::info!("Checking FFmpeg availability...");
-    auto_download()?;
+    ffmpeg::auto_download_with_progress()?;
     tracing::info!("FFmpeg is ready");
 
     // Check encoder availability

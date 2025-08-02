@@ -7,3 +7,4 @@ pub mod validator;
 pub mod duration_checker;
 pub mod file_suggester;
 pub mod settings;
+pub mod ffmpeg;
